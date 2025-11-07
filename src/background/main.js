@@ -1,0 +1,633 @@
+// 要用这个的话 不可以使用ES module的模式 所以要把model改掉
+// importScripts(chrome.runtime.getURL('js/xlsx.js'))
+const utils = require('@/utils/utils').default
+const instance = require('@/utils/instance').default
+let TIKTOK_BUSINESS_ACCOUNT = 'tiktokbusinessaccount'
+let TIKTOK_BUSINESS_ROI_DATA = 'tiktokbusinessroidata'
+let TIKTOK_BUSINESS_MS_TOKEN = 'tiktokbueinessmstoken'
+let TIKTOK_BUSINESS_ADVERTISEMENT = 'tiktokbusinessadvertisement'
+let tiktok_advertisement = []
+// // 德国仓 - 登录
+const LingXingErp_Login_GETTOKEN = async function(data) {
+    let params = Object.assign(data, {
+            "businessType": "oms"
+    })
+    return await utils.request(Config.LingXingErp_Login, "post", {
+        body: JSON.stringify(params),
+        headers: {
+            'content-type': 'application/json'
+        }
+    })
+}
+// 维赢仓 - outh验证
+const ShipoutErp_LOGIN = async function(data) {
+    console.log(data)
+    let { loginAccount, password } = data
+    const params = new FormData()
+    params.append('grant_type', 'password')
+    params.append('username', loginAccount)
+    params.append('password', password)
+    params.append('scope', 'oms')
+    params.append('systemType', 'OMS')
+    params.append('client_secret', 7700)
+    params.append('client_id', "browser-oms")
+    return await utils.request(Config.ShipoutErp_Login, "post", {
+        body: params
+    })
+}
+
+console.log('This is background page');
+// // 创建一个持久化存储
+// // 初始化本地的cookies
+async function initCookies(url, key) {
+    chrome.cookies.getAll({ url }, function(cookies) {
+        let str = []
+        for (let index = 0; index < cookies.length; index++) {
+            const cookie = cookies[index];
+            str = str.concat(`${cookie.name}=${cookie.value}`)
+        }
+        // 存储起来
+        utils.persistent.addLocalStorage(key, JSON.stringify(str.join(';')))
+    })
+}
+// 直接调用我的自定义tab栏
+async function get_collect_list() {
+    const collectList = await utils.persistent.getLocalStorage('collectURL')
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        let tab = tabs[0]
+        if (tab) {
+            // 将数据传递出去
+            chrome.tabs.sendMessage(tab.id, {
+                message: "getCollect",
+                data: collectList
+            })
+        }
+    })
+}
+
+async function messageToInject(message, data) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        let tab = tabs[0]
+        if (tab) {
+            // 将数据传递出去
+            chrome.tabs.sendMessage(tab.id, {
+                message,
+                data
+            })
+        }
+    })
+}
+
+// 向当前的激活tab发送
+async function toActivePage(message, data) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        let tab = tabs[0]
+        if (tab) {
+            // 将数据传递出去
+            chrome.tabs.sendMessage(tab.id, {
+                message,
+                data
+            })
+        } else {
+            console.log('当前没有chrome在线, 转弹窗')
+            let id = new Date().getTime() + ''
+            chrome.notifications.create(id,{
+                type: 'basic',
+                title: '广告提醒',
+                iconUrl: chrome.runtime.getURL("/assets/logo.png"),
+                message: data.roiData + `\n${data.moneyData}`
+            }, (notificationId) => {
+                if (chrome.runtime.lastError) {
+                    console.error('创建通知失败:', chrome.runtime.lastError.message);
+                } else {
+                    console.log('通知创建成功，ID:', notificationId);
+                }
+            })
+        }
+    })
+}
+// 请求下
+async function getIm(params) {
+    
+}
+// // 得到baseurl
+chrome.runtime.onMessage.addListener(async (params, sender, sendResponse) => {
+    let timer = null;
+    sendResponse({ 'statu': 'pending' })
+    // 这个地方 接受popup.html发送过来的内容
+    if (params.message === 'addWarehouse') {
+        // 当前添加的是什么仓库 有 weiying paipai weilai
+        let resp;
+        let type = params.data.Erp
+        let info = params.data.Info 
+        console.log(info, type)
+        let prev;
+        switch (type) {
+            case 'PaiPai':
+                break;
+            case 'ShipOut':
+                resp = await ShipoutErp_LOGIN(info)
+                if (resp.access_token.length) {
+                    // 先拿之前的
+                    prev = await utils.persistent.existLocalStorage(instance.ShipoutToken)
+                    // // 加进去
+                    prev = prev.concat({
+                        account: info.loginAccount,
+                        pwd: info.password,
+                        token: resp.access_token
+                    })
+                    // 有值,存起来token
+                    utils.persistent.addLocalStorage(instance.ShipoutToken, JSON.stringify(prev))
+                    chrome.runtime.sendMessage({
+                        message: 'addSuccess'
+                    })
+                }
+                // 请求维赢的数据
+                break;
+            case 'WeiLai':
+                resp = await LingXingErp_Login_GETTOKEN(info)
+                if (resp.code === 200) {
+                    // 先拿之前的
+                    prev = await utils.persistent.existLocalStorage(instance.WeiLaiToken)
+                    // 加进去
+                    prev = prev.concat({
+                        account: info.loginAccount,
+                        pwd: info.password,
+                        token: resp.data.token
+                    })
+                    // 成功啦 存储token
+                    utils.persistent.addLocalStorage(instance.WeiLaiToken, JSON.stringify(prev))
+                    chrome.runtime.sendMessage({
+                        message: 'addSuccess'
+                    })
+                }
+                break;
+            default:
+                // 未知的账号
+                throw new Error('出现了未知的错误')
+        }
+    }
+    else if (params.message === 'cookies') {
+        console.log('触发了')
+        initCookies(params.data.url, params.data.name)
+    }
+    else if (params.message === 'good_limit') {
+        // data是true就是监听 false就是不监听
+        let resp, isLimit = false, isRun = params.statu, sendData = {}, listenData = [], haveLimitData = [], alreadyAdd = false;
+        if (params.statu) {
+            // 请求数据 如果我是有传递的,就传参数给LIMIT
+            if (params.data[0].trim()) {
+                sendData = {
+                    productSkcIdList: params.data
+                }
+            }
+            let param = Object.assign({
+                "pageSize": 30,
+                "pageNumber": 1,
+                "timeDimension": 1
+              }, sendData)
+            while(isRun) {
+                let mallid = await utils.persistent.getLocalStorage('temu_mallid')
+                resp = await utils.request(instance.TEMU_Traffic_Analysis, "post", {
+                    body: JSON.stringify(param),
+                    headers: {
+                        'content-type': 'application/json',
+                        'Mallid': mallid
+                    }
+                })
+                // 判断是否有被禁的
+                if (resp.success) {
+                    for(let i = 0; i < resp.result.pageItems.length; i++) {
+                        if (resp.result.pageItems[i].flowLimitStatus === 2) {
+                            haveLimitData = haveLimitData.concat({
+                                id: resp.result.pageItems[i].productId,
+                                statu: 2
+                            })
+                        }
+                        if (!alreadyAdd) {
+                            listenData = listenData.concat({
+                                id: resp.result.pageItems[i].productId,
+                                statu: 1
+                            })
+                        }
+                    }
+                }
+                // 如果有,就要去操作了 操作完事就停止了
+                if (haveLimitData.length) {
+                    // 发请求
+                    resp = await utils.request(instance.Local_CALL_USER, "get")
+                    isRun = false
+                    chrome.runtime.sendMessage({
+                        message: 'listenData',
+                        data: listenData,
+                        errorData: haveLimitData
+                    })
+                } else {
+                    // 没有
+                    chrome.runtime.sendMessage({
+                        message: 'listenData',
+                        data: listenData
+                    })
+                }
+                alreadyAdd = true
+                await utils.delayFn(300)
+            }
+        } else {
+            isRun = false
+        }
+    }
+    else if (params.message === 'temu_rate_mallid') {
+        // 存储起来
+        utils.persistent.addLocalStorage('temu_mallid', params.data)
+    }
+    else if (params.message === 'listenTk') {
+        // 先告诉当前的页面
+        messageToInject("tkWarehouse_statu", "正在获取广告户信息")
+        // 业务函数外接
+        const resp = await get_TikTok_Data()
+        if (resp == 'success') {
+            // 发通知已经更新了数据
+            chrome.runtime.sendMessage({
+                message: 'tiktokDataUpdate'
+            })
+        }
+    }
+    else if (params.message === 'gettiktokmsToken') {
+        utils.persistent.addLocalStorage(TIKTOK_BUSINESS_MS_TOKEN, JSON.stringify(params.data))
+    }
+    else if (params.message === 'updateCollect') {
+        utils.persistent.addLocalStorage('collectURL', params.data)
+    }
+    else if (params.message === 'startCollect') {
+        get_collect_list()
+    }
+    else if (params.message === 'weiyingToken') {
+        if (!params.data || !params.id) {
+            return
+        }
+        let running = true, pageNum = 1, dataList = [], resp = null
+        async function getData(num) {
+            // 拿到token去请求数据
+            let url = `http://omsbackend.jaspers.com.cn:16017/prod-api/oms/backend/inventory/list?pageNum=${num}&pageSize=50`
+            const resp = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${params.data}`,
+                    'clientid': params.id
+                }
+            }).then(res => res.json())
+            return resp
+        }
+        while(running) {
+           resp = await getData(pageNum)
+           if (resp.total > pageNum * 50) {
+                pageNum++
+                for (let index = 0; index < resp.rows.length; index++) {
+                    const element = resp.rows[index];
+                    if (element.warehouseName == "Jasper美西仓" || element.warehouseName == "JASPER美东仓") {
+                        dataList = dataList.concat(element)
+                    }
+                }
+                await utils.delayFn()
+           } else {
+                running = false
+           }
+        }
+        if (dataList.length) {
+             utils.persistent.addLocalStorage('weiyingown_list', JSON.stringify(dataList))
+             toActivePage('temu_limit_data', {
+                data: JSON.stringify(dataList)
+             })
+        }
+    }
+    else if (params.message === 'temu_data_get') {
+        let m = await utils.persistent.getLocalStorage('temu_mallid')
+        let url = 'https://agentseller.temu.com/bg-brando-mms/supplier/data/center/skc/sales/data'
+        let param = ({
+            body: JSON.stringify(params.data),
+            headers: {
+                'Mallid': m,
+                'content-type': 'application/json'
+            }
+        })
+        const resp = await utils.request(url, "post", param)
+        console.log(resp)
+        if (resp.success) {
+            // 证明有数据,直接存储起来
+            utils.persistent.addLocalStorage('all_temu_data_limit', JSON.stringify(resp.result))
+            // 返回给前台
+            messageToInject("temu_limit_data", JSON.stringify(resp.result))
+        }
+    }
+    else if (params.message === 'aliexpress_data') {
+        console.log(params.data, '看看数据')
+        let data = JSON.parse(params.data)
+        // 这个先下载吧
+        let pdfList = data.pdfData
+        if (pdfList.length) {
+            let dirName = new Date().getTime() + 'Aliexpress面单'
+            for (let index = 0; index < pdfList.length; index++) {
+                const element = pdfList[index];
+                let fileName = `${element.orderNum}-${element.yundan}.pdf`
+                chrome.downloads.download({
+                    url: element.pdf_url,
+                    saveAs: false, // true的话会弹出让你确认保存地址的窗,设置false
+                    filename: `${dirName}/${fileName}`, //这样就可以了,不要出现../ .这些也不要出现/ 直接开头就是本地浏览器保存的文件夹目录下了
+                    conflictAction: 'uniquify'
+                })
+                await utils.delayFn()
+            }
+        }
+        const resp = await await utils.request(instance.Local_SAVE_XLSX, "post", {
+            body: data.outData,
+            headers: {
+                'content-type': 'application/json'
+            }
+        })
+    }
+})
+
+// 强制顶戴上一次函数的执行完成再执行当前的函数
+function strongWait(fn) {
+
+}
+
+// tiktok 申请所有的数据
+const get_TikTok_Data = async function() {
+    let roi_data = {}, showStr = '', moneyStr = '';
+    tiktok_advertisement = []
+    let account_url = 'https://business.tiktok.com/api/v3/bm/account/list/?org_id=7490498299846361105&attr_source=TTAM_account_list&source_biz_id=&attr_type=web&page=1&keyword=&account_type=1&limit=10'
+    // 先看看本地有没有存储,有的话就不用再请求一次了
+    let local_account = await utils.persistent.getLocalStorage(TIKTOK_BUSINESS_ACCOUNT)
+    // 拿到所有的账目  
+    if (!local_account) {
+        let resp = await utils.request(account_url, "get")
+        if(resp.msg === 'success') {
+            // 持久化保存下
+            console.log('看看我的账户', resp.data)
+            utils.persistent.addLocalStorage(TIKTOK_BUSINESS_ACCOUNT, JSON.stringify(resp.data.accounts))
+            local_account = resp.data.accounts
+        } else {
+            console.log('报错是:', resp)
+        }
+    } 
+    // 接下去往下走 拿到所有的账户的广告数据,保存在本地
+    // 拿到今天的数据
+    let today = utils.formatDate(new Date(),"yyyy-MM-dd")
+    let url = 'https://ads.tiktok.com/api/v3/i18n/statistics/transaction/balance/query/'
+    let msToken = await utils.persistent.getLocalStorage(TIKTOK_BUSINESS_MS_TOKEN)
+    // 拿到当前选择的广告户的数据
+    let moveWidth = 100 / local_account.length
+    // 当前移动多少
+    let currentMove = 0
+    for (let index = 0; index < local_account.length;) {
+        // if (index !== 4) {
+        //     continue
+        // }
+        let bec_seller_url = "https://business.tiktok.com/api/v3/bm/account/gmv_max/?org_id=7490498299846361105&attr_source=&source_biz_id=&attr_type=web&account_type=1"
+        let roi_url = "https://ads.tiktok.com/api/oec_shopping/v1/oec/stat/post_overview_stat?locale=zh&language=zh&bc_id=7490498299846361105"
+        const account = local_account[index];
+        // let filter_list = ['YG', 'MQ']
+        // let listen_item = filter_list.find(item => account.account_name.includes(item))
+        currentMove += moveWidth
+        let country_en = account.account_name.substring(0,5)
+        let currentCNmoney = null
+        if (account.account_name.includes('MQ') && (new Date().getHours() < 15)) {
+            // 要用昨天
+            today = utils.formatDate(new Date(new Date().getTime() - 86400000),"yyyy-MM-dd");
+        }
+        // 在这里请求我的金额额度
+        let money_url = url
+        const response = await utils.request(money_url, "get", {
+            aadvid: account.account_id,
+            source: 3,
+            req_src: 'bidding',
+            msToken
+        })
+        // if (!listen_item) {
+        //     continue
+        // }
+        // console.log(listen_item)
+        // 这个是拿到oec_seller_id用的
+        bec_seller_url += `&account_id=${account.account_id}&shop_owner_id=${account.owner_id}`
+        let resp = await utils.request(bec_seller_url, "get")
+        if (resp.msg === 'success') {
+            // 这个是拿到当前的所有广告计划的 然后campaign_opt_status等于1是关闭,等于0是开启 暂时先不用
+            // 证明拿到了id值,可以开始去拿roi数据了
+            let aaid = resp.data.accounts[0].account_id
+            // 这个是拿到每个广告的roi
+            roi_url += `&oec_seller_id=${aaid}&aadvid=${account.account_id}`
+            resp = await utils.request(roi_url, "post", {
+                body: JSON.stringify({
+                    "query_list": [
+                      "cost",
+                      "onsite_roi2_shopping_sku",
+                      "cost_per_onsite_roi2_shopping_sku",
+                      "onsite_roi2_shopping_value",
+                      "onsite_roi2_shopping"
+                    ],
+                    "start_time": today,
+                    "end_time": today,
+                    "campaign_shop_automation_type": 2,
+                    "external_type_list": [
+                      "307",
+                      "304",
+                      "305"
+                    ]
+                }),
+                headers: {
+                    'content-type': 'application/json'
+                }
+            })
+            if (resp.data?.statistics) {
+                // 看看
+                console.log(resp.data,'看看')
+                // 证明就是拿到数据了
+                let data = resp.data.statistics
+                let cost = data.cost // 消费成本
+                let spend_rate = data.onsite_roi2_shopping // 投资回报率
+                let get_order = data.onsite_roi2_shopping_sku // 出的单量
+                let all_sell = data.onsite_roi2_shopping_value // 总收入
+                let sell_rate = data.cost_per_onsite_roi2_shopping_sku // 平均下单的成本 也就是roi
+                showStr += `${country_en}当前每单消耗: ${sell_rate}USD, 现已消耗了${cost}USD, 出了${get_order}单\n`
+                roi_data[country_en] = {
+                    cost,
+                    spend_rate,
+                    get_order,
+                    all_sell,
+                    sell_rate,
+                    currentMoney: currentCNmoney
+                }
+            }
+            let plan_url = `https://ads.tiktok.com/api/oec_shopping/v1/oec/stat/post_campaign_list?locale=zh&language=zh&oec_seller_id=${aaid}&aadvid=${account.account_id}&bc_id=7490498299846361105`
+            // // 请求下,我要活动数据
+            // // 今天的日期
+            let today_time = utils.formatDate(new Date(), 'yyyy-MM-dd')
+            // // 七天前
+            let prev_time = utils.formatDate(new Date().getTime() - (1000 * 60 * 60 * 24 * 7), 'yyyy-MM-dd')
+            resp = await utils.request(plan_url, "post", {
+                body: JSON.stringify({
+                    "query_list": [
+                      "campaign_opt_status",
+                      "campaign_name",
+                      "campaign_primary_status",
+                      "campaign_status",
+                      "campaign_budget",
+                      "campaign_budget_mode",
+                      "campaign_create_channel",
+                      "template_ad_start_time",
+                      "template_ad_end_time",
+                      "template_ad_roas_bid",
+                      "template_ad_schedule_type",
+                      "auto_increase_budget_effective_budget",
+                      "cost",
+                      "billed_cost",
+                      "onsite_roi2_shopping_sku",
+                      "cost_per_onsite_roi2_shopping_sku",
+                      "onsite_roi2_shopping_value",
+                      "onsite_roi2_shopping",
+                      "basic_cost",
+                      "basic_onsite_roi2_shopping",
+                      "campaign_additional_budget",
+                      "creative_nobid_cost",
+                      "session_info",
+                      "campaign_no_bid_budget",
+                      "gmv_max_bid_type",
+                      "campaign_target_roi_budget_mode",
+                      "campaign_target_roi_budget",
+                      "promotion_days_mode",
+                      "in_promotion_days",
+                      "promotion_days_roas_bid_multiplier",
+                      "promotion_days_budget_multiplier",
+                      "promotion_days_schedules",
+                      "compensation_info"
+                    ],
+                    "start_time": prev_time,
+                    "end_time": today_time,
+                    "order_field": "cost",
+                    "order_type": 1,
+                    "page": 1,
+                    "campaign_status": [
+                      "no_delete"
+                    ],
+                    "keyword": "",
+                    "campaign_shop_automation_type": 2,
+                    "external_type_list": [
+                      "304",
+                      "307"
+                    ],
+                    "keyword_type": 0
+                }),
+                headers: {
+                    'content-type': 'application/json'
+                }
+            })
+            if (resp.data && resp.data.table.length) {
+                // 拿到了,看看
+                console.log(resp)
+                let activeList = []
+                for (let index = 0; index < resp.data.table.length; index++) {
+                    const element = resp.data.table[index];
+                    if (element.campaign_primary_status == "delivery_ok") {
+                        activeList = activeList.concat(element)
+                    }
+                }
+                // 有东西 直接保存起来 
+                if (activeList.length) {
+                    let activeItem = {
+                        accountName: account.account_name,
+                        activity: []
+                    }
+                    for (let active_index = 0; active_index < activeList.length; active_index++) {
+                        const a = activeList[active_index];
+                        activeItem.activity = activeItem.activity.concat({
+                            advertisementId: a.campaign_id,
+                            advertisementName: a.campaign_name,
+                            cost_money: a.basic_cost,
+                            correct_money: a.billed_cost,
+                            get_order: a.onsite_roi2_shopping_sku,
+                            average_cost_money: a.cost_per_onsite_roi2_shopping_sku,
+                            all_save: a.onsite_roi2_shopping_value,
+                            current_roi: a.onsite_roi2_shopping
+                        })
+                    }
+                    tiktok_advertisement = tiktok_advertisement.concat(activeItem)
+                }
+                // campaign_id 这个可能是后面要改动他的时候用到的一个id,先看看
+                // 拿到更新的数据
+                // let update_data_url = `https://ads.tiktok.com/api/oec_shopping/v1/creation/all_ad_data/detail?locale=zh&language=zh&oec_seller_id=${aaid}&aadvid=${account.account_id}&bc_id=7490498299846361105&campaign_id=${resp.data.table[2].campaign_id}`
+                // 上面这个地址是拿到ad_id的
+                // 先拿到本次要更新的数据
+                // let updateDataResp = await utils.request(update_data_url, "get")
+                // if (updateDataResp.data && updateDataResp.data.ad_info) {
+                //     // 看看吧 进来就是数据是对的,但是要更新部分的内容 例如我的roi和我的预算
+                //     let updateData = updateDataResp.data
+                //     // 这个是电脑的数据,这个是固定的,不会变
+                //     updateData.risk_info = {
+                //         "cookie_enabled": true,
+                //         "screen_width": 1920,
+                //         "screen_height": 1080,
+                //         "browser_language": "zh-CN",
+                //         "browser_platform": "Win32",
+                //         "browser_name": "Mozilla",
+                //         "browser_version": "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+                //         "browser_online": true,
+                //         "timezone_name": "Asia/Shanghai"
+                //     }
+                //     // 如下是改预算 值是一致的
+                //     let sellMoney = '11'
+                //     updateData.campaign_info.budget = sellMoney
+                //     updateData.ad_info.budget = sellMoney
+                //     // 如下是改roi 最低1 最高20 可以小数点
+                //     let sellRoi = '20'
+                //     updateData.ad_info.roas_bid = sellRoi
+                //     // 这个是预算范围
+                //     updateData.ad_info.adjusted_budget = sellMoney * 1.5
+                //     updateData.ad_info.adjusted_roas_bid = sellRoi * 0.9
+                //     console.log(updateDataResp)
+                //     // 这个地方修改看看
+                //     let update_url = `https://ads.tiktok.com/api/oec_shopping/v1/creation/all_ad_data/update?locale=zh&language=zh&oec_seller_id=${aaid}&aadvid=${account.account_id}&bc_id=7490498299846361105`
+                //     // 更新看看
+                //     resp = await utils.request(update_url, "post", {
+                //         body: JSON.stringify(updateData),
+                //         headers: {
+                //             'content-type': 'application/json'
+                //         }
+                //     })
+                //     // 看看是否更新成功
+                //     if (resp.data.ad_id) {
+                //         console.log('更新成功,当前的roi和预算分别是',sellRoi, sellMoney)
+                //     }
+                // }
+            }
+        } else {
+            // 继续走一遍
+            await utils.delayFn(2)
+            continue
+        }
+        await utils.delayFn(2)
+        index++
+        messageToInject("tkWarehouse_statu", currentMove)
+        if (response.msg === 'success') {
+            currentCNmoney = `${country_en}当前通用额度: ${response.data?.credit_cash_valid}USD, 广告可用额度： ${response.data?.ad_credit_valid}USD\n`
+            moneyStr += currentCNmoney
+        } else {
+            console.log('有大问题~')
+        }
+        if (local_account.length == index + 1) {
+            // 保存到本地
+            utils.persistent.addLocalStorage(TIKTOK_BUSINESS_ADVERTISEMENT, JSON.stringify(tiktok_advertisement))
+        }
+    }
+    // 保存到本地
+    utils.persistent.addLocalStorage(TIKTOK_BUSINESS_ROI_DATA, JSON.stringify(roi_data))
+    messageToInject("tkWarehouse_statu", 100)
+    messageToInject("close_message")
+    await utils.delayFn(2)
+    // 触发弹窗
+    // 改变策略， 直接给页面，页面去传递就行了
+    toActivePage('tiktokCurrentBusiness', {
+        roiData: showStr,
+        moneyData: moneyStr
+    })
+    return Promise.resolve('success')
+}

@@ -1,0 +1,398 @@
+.tables {
+    position: fixed;
+    top: 10%;
+    right: 40px;
+    max-width: 400px;
+    z-index: 99999;
+    transform: translateX(430px);
+}
+.tables.animate {
+    transition: transform linear .3s;
+}
+.add_container {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    color: #fff;
+    background-color: #188fff;
+}
+.tables .prev,
+.tables .next {
+    width: 32px;
+    height: 32px;
+    background-color: red;
+    clip-path: polygon(100% 0, 40% 50%, 100% 100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-100%, 0);
+    cursor: pointer;
+}
+.tables .next {
+    left: unset;
+    right: 0;
+    transform: translate(100%, 0);
+    clip-path: polygon(0 0, 60% 50%, 0 100%);
+    background-color: green;
+}
+.add {
+    color: #fff;
+    text-shadow: none;
+    line-height: 32px;
+    position: relative;
+    display: inline-block;
+    font-weight: 700;
+    font-size: 20px;
+    white-space: nowrap;
+    text-align: center;
+    background-image: none;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.015);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    height: 32px;
+    padding: 0px 10px;
+    font-size: 14px;
+    border-radius: 2px;
+    background: transparent;
+}
+.add:hover {
+    color: #ff0000;
+}
+
+#ta, #ur {
+    box-sizing: border-box;
+    border: none;
+    margin: 0;
+    padding: 0;
+    font-variant: tabular-nums;
+    list-style: none;
+    font-feature-settings: 'tnum';
+    position: relative;
+    display: inline-block;
+    width: 30%;
+    min-width: 0;
+    padding: 0px 11px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.5715;
+    background-color: transparent;
+    background-image: none;
+    outline: none;
+    border-radius: 2px;
+    transition: all 0.3s;
+    margin-right: 10px;
+}
+#co {
+    width: 5%;
+}
+#ta::placeholder, #ur::placeholder {
+    color: #fff;
+}
+
+.show_container {
+    background-color: rgba(128, 128, 128, 0.199);
+    padding: 5px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.show_container .tab_item {
+    cursor: pointer;
+    width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 5px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    border: 1px dotted #1890ff;
+    border-radius: 1px;
+    white-space: nowrap;
+    color: #fff;
+    text-align: center;
+}
+.show_container .tab_item a:hover {
+    color: red;
+}
+.show_container .tab_item a {
+    color: #fff; 
+    text-decoration: none;  
+}
+
+.show_tk_container {
+    position: relative;
+    width: 900px;
+    height: 46px;
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translate(-50%, -125%);
+    color: red;
+    font-size: 30px;
+    padding: 8px;
+    z-index: 9999;
+    font-size: 24px;
+    border: 1px solid #fff;
+}
+.show_tk_container.active {
+    transition: transform ease-out .5s;
+    transform: translate(-50%, 0);
+}
+
+.show_tk_container .show_main {
+    height: 100%;
+}
+.parent_zx {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translateX(100%);
+    font-size: 30px;
+    color: #fff;
+    text-align: center;
+    padding: 0 10px;
+}
+
+.look_detail {
+    color: #188fff;
+    transition: color .5s ease-in;
+    cursor: pointer;
+}
+.look_detail:hover {
+    color: #ff0000;
+}
+.loudou {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+}
+.loudou .ball_container {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    /* 这个是添加隔层 外头的东西不给看 */
+    clip-path: inset(-50% -10px 0 -10px);
+}
+.ball_container::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background-color: #188fffb9;
+    animation: l12-0 .5s cubic-bezier(0, 200, 1, 200) infinite, l12-1 2s linear infinite;
+}
+.ball_container svg {
+    width: 40px;
+    height: 40px;
+    animation: l12-2 2s cubic-bezier(0, 288, 0, 1) infinite;
+}
+@keyframes l12-0 {
+    0%, 2% {bottom: 0%;}
+    98%,to {bottom:0.1%}
+}
+@keyframes l12-1 {
+    0% {translate: -20px -30px}
+    50% {translate: 15px -10px}
+    100% {translate: 40px -30px}
+}
+@keyframes l12-2 {
+    50% {transform:  rotate(0deg);}
+    100% {transform: rotate(-5deg);}
+}
+.myChart_container {
+    display: flex;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(128, 128, 128, 0.541);
+}
+.myChart_container .myChart {
+    width: 600px;
+    height: 500px;
+}
+#close {
+    position: absolute;
+    top: 5px;
+    right: 35px;
+    color: red;
+    cursor: pointer;
+    font-size: 30px;
+}
+.tag-vibrant {
+    display: inline-block;
+    padding: 2px;
+    margin: 8px 0 0;
+    border-radius: 4px; /* 方角更有活力 */
+    font-size: 12px;
+    font-weight: 500;
+    font-family: "Microsoft YaHei", sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid; /* 粗边框强调 */
+}
+/* 不同颜色主题 */
+.tag-vibrant.red {
+background-color: #fff1f0;
+color: #cf1322;
+border-color: #cf1322;
+}
+.tag-vibrant.blue {
+background-color: #e6f4ff;
+color: #1890ff;
+border-color: #1890ff;
+}
+.tag-vibrant.yellow {
+background-color: #fffbe6;
+color: #faad14;
+border-color: #faad14;
+}
+/* hover 效果：背景色加深，文字色不变 */
+.tag-vibrant.red:hover {
+background-color: #ffebe9;
+}
+.tag-vibrant.blue:hover {
+background-color: #d1eaff;
+}
+.tag-vibrant.yellow:hover {
+background-color: #fff5cc;
+}
+/* 时间 Tag 基础样式：和之前 Tag 尺寸对齐 */
+.time-tag {
+    width: 100%;
+    text-align: right;
+    display: inline-block;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 12px;
+    cursor: default;
+    transition: background-color 0.2s ease;
+  }
+/* hover 效果：轻微提亮，和 Tag 交互统一 */
+.time-tag:hover {
+background-color: #ebf0f8;
+}
+/* 纯数字样式：突出时间，用稍粗字体 */
+.time-tag .time-number {
+font-weight: 500;
+color: #2d3748;
+letter-spacing: 0.5px; /* 数字间轻微留白，更易读 */
+}
+/* 不同主题色：可选，适配不同场景 */
+.time-tag.primary {
+display: inline-block;
+background-color: #e6f4ff;
+}
+.time-tag.primary .time-number {
+color: #1890ff; /* 主色数字，更醒目 */
+}
+.time-tag.warning {
+display: inline-block;
+background-color: #fffbe6;
+}
+.time-tag.warning .time-number {
+color: #faad14; /* 警告色，适合限时场景 */
+}
+
+/* 页面容器：方便查看效果，可删除 */
+.btn-container {
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    z-index: 9999;
+    margin-left: 15px;
+  }
+/* 请求按钮核心样式 */
+.request-btn {
+/* 按钮基础样式 */
+padding: 6px 8px;
+border: none;
+border-radius: 4px;
+background-color: #1890ff;
+color: #fff;
+font-size: 16px;
+font-weight: 500;
+cursor: pointer;
+/* 布局：图标和文字居中 */
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 8px; /* 图标和文字间距 */
+/* 过渡：所有状态变化更丝滑 */
+transition: all 0.25s ease;
+/* 禁用时样式预设 */
+opacity: 1;
+}
+/* 鼠标悬浮：加深背景色+轻微放大 */
+.request-btn:hover {
+background-color: #096dd9;
+transform: scale(1.03);
+box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+}
+/* 点击瞬间：恢复原尺寸+加深阴影（模拟按压感） */
+.request-btn:active {
+transform: scale(1);
+box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+/* 加载中状态（通过表单提交触发，无需JS） */
+.request-form:valid .request-btn {
+background-color: #69b1ff;
+cursor: not-allowed;
+opacity: 0.9;
+}
+/* 加载图标：默认隐藏，提交时显示 */
+.request-btn .loading-icon {
+width: 18px;
+height: 18px;
+border: 2px solid #fff;
+border-top-color: transparent;
+border-radius: 50%;
+animation: spin 1s linear infinite;
+display: none;
+}
+/* 提交时显示加载图标，隐藏文字 */
+.request-btn .loading-icon {
+display: none;
+}
+.request-btn .btn-text {
+display: block;
+}
+/* 加载动画 */
+@keyframes spin {
+to {
+    transform: rotate(360deg);
+}
+}
+.out_order, .download_order {
+    padding: 5px 15px;
+    position: fixed;
+    top: 140px;
+    right: 20px;
+    background-color: red;
+    color: #fff;
+    font-size: 16px;
+    border-radius: 8px;
+    z-index: 9999;
+    cursor: pointer;
+}
+.download_order {
+    top: 180px;
+    background-color: green;
+}
