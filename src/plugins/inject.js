@@ -5,6 +5,648 @@ let weiyingUrl = /http:\/\/omsbackend\.jaspers\.com\.cn\:16017/
 let temu_Data_Url = /https:\/\/agentseller\.temu\.com\/newon\/goods\-data/
 let current_url = location.href
 let url_list = null, timer = null, current_Data = null, outData = [['编号', '仓库', '订单号', '邮编', '运单号', '产品SKU', '手机号', '收货人地址']];
+let USA_map = {
+    "ALABAMA": "AL",
+    "ALASKA": "AK",
+    "ARIZONA": "AZ",
+    "ARKANSAS": "AR",
+    "CALIFORNIA": "CA",
+    "COLORADO": "CO",
+    "CONNECTICUT": "CT",
+    "DELAWARE": "DE",
+    "FLORIDA": "FL",
+    "GEORGIA": "GA",
+    "HAWAII": "HI",
+    "IDAHO": "ID",
+    "ILLINOIS": "IL",
+    "INDIANA": "IN",
+    "IOWA": "IA",
+    "KANSAS": "KS",
+    "KENTUCKY": "KY",
+    "LOUISIANA": "LA",
+    "MAINE": "ME",
+    "MARYLAND": "MD",
+    "MASSACHUSETTS": "MA",
+    "MICHIGAN": "MI",
+    "MINNESOTA": "MN",
+    "MISSISSIPPI": "MS",
+    "MISSOURI": "MO",
+    "MONTANA": "MT",
+    "NEBRASKA": "NE",
+    "NEVADA": "NV",
+    "NEW HAMPSHIRE": "NH",
+    "NEW JERSEY": "NJ",
+    "NEW MEXICO": "NM",
+    "NEW YORK": "NY",
+    "NORTH CAROLINA": "NC",
+    "NORTH DAKOTA": "ND",
+    "OHIO": "OH",
+    "OKLAHOMA": "OK",
+    "OREGON": "OR",
+    "PENNSYLVANIA": "PA",
+    "RHODE ISLAND": "RI",
+    "SOUTH CAROLINA": "SC",
+    "SOUTH DAKOTA": "SD",
+    "TENNESSEE": "TN",
+    "TEXAS": "TX",
+    "UTAH": "UT",
+    "VERMONT": "VT",
+    "VIRGINIA": "VA",
+    "WASHINGTON": "WA",
+    "WEST VIRGINIA": "WV",
+    "WISCONSIN": "WI",
+    "WYOMING": "WY"
+}
+let country_map = [
+    {
+        "region_id": 3,
+        "region_name": "Albania",
+        "region_short_name": "al",
+        "region_cn": "阿尔巴尼亚"
+    },
+    {
+        "region_id": 4,
+        "region_name": "Algeria",
+        "region_short_name": "dz",
+        "region_cn": "阿尔及利亚"
+    },
+    {
+        "region_id": 5,
+        "region_name": "Andorra",
+        "region_short_name": "ad",
+        "region_cn": "安道尔"
+    },
+    {
+        "region_id": 9,
+        "region_name": "Argentina",
+        "region_short_name": "ar",
+        "region_cn": "阿根廷"
+    },
+    {
+        "region_id": 10,
+        "region_name": "Armenia",
+        "region_short_name": "am",
+        "region_cn": "亚美尼亚"
+    },
+    {
+        "region_id": 12,
+        "region_name": "Australia",
+        "region_short_name": "au",
+        "region_cn": "澳大利亚"
+    },
+    {
+        "region_id": 13,
+        "region_name": "Austria",
+        "region_short_name": "at",
+        "region_cn": "奥地利"
+    },
+    {
+        "region_id": 14,
+        "region_name": "Azerbaijan",
+        "region_short_name": "az",
+        "region_cn": "阿塞拜疆"
+    },
+    {
+        "region_id": 16,
+        "region_name": "Bahrain",
+        "region_short_name": "bh",
+        "region_cn": "巴林"
+    },
+    {
+        "region_id": 20,
+        "region_name": "Belgium",
+        "region_short_name": "be",
+        "region_cn": "比利时"
+    },
+    {
+        "region_id": 26,
+        "region_name": "Bosnia and Herzegovina",
+        "region_short_name": "ba",
+        "region_cn": "波斯尼亚和黑塞哥维那"
+    },
+    {
+        "region_id": 29,
+        "region_name": "Brazil",
+        "region_short_name": "br",
+        "region_cn": "巴西"
+    },
+    {
+        "region_id": 31,
+        "region_name": "Brunei Darussalam",
+        "region_short_name": "bn",
+        "region_cn": "文莱达鲁萨兰国"
+    },
+    {
+        "region_id": 32,
+        "region_name": "Bulgaria",
+        "region_short_name": "bg",
+        "region_cn": "保加利亚"
+    },
+    {
+        "region_id": 37,
+        "region_name": "Canada",
+        "region_short_name": "ca",
+        "region_cn": "加拿大"
+    },
+    {
+        "region_id": 42,
+        "region_name": "Chile",
+        "region_short_name": "cl",
+        "region_cn": "智利"
+    },
+    {
+        "region_id": 45,
+        "region_name": "Colombia",
+        "region_short_name": "co",
+        "region_cn": "哥伦比亚"
+    },
+    {
+        "region_id": 49,
+        "region_name": "Costa Rica",
+        "region_short_name": "cr",
+        "region_cn": "哥斯达黎加"
+    },
+    {
+        "region_id": 50,
+        "region_name": "Croatia",
+        "region_short_name": "hr",
+        "region_cn": "克罗地亚"
+    },
+    {
+        "region_id": 52,
+        "region_name": "Cyprus",
+        "region_short_name": "cy",
+        "region_cn": "塞浦路斯"
+    },
+    {
+        "region_id": 53,
+        "region_name": "Czech Republic",
+        "region_short_name": "cz",
+        "region_cn": "捷克共和国"
+    },
+    {
+        "region_id": 54,
+        "region_name": "Denmark",
+        "region_short_name": "dk",
+        "region_cn": "丹麦"
+    },
+    {
+        "region_id": 57,
+        "region_name": "Dominican Republic",
+        "region_short_name": "do",
+        "region_cn": "多米尼加共和国"
+    },
+    {
+        "region_id": 59,
+        "region_name": "Ecuador",
+        "region_short_name": "ec",
+        "region_cn": "厄瓜多尔"
+    },
+    {
+        "region_id": 60,
+        "region_name": "Egypt",
+        "region_short_name": "eg",
+        "region_cn": "埃及"
+    },
+    {
+        "region_id": 61,
+        "region_name": "El Salvador",
+        "region_short_name": "sv",
+        "region_cn": "萨尔瓦多"
+    },
+    {
+        "region_id": 64,
+        "region_name": "Estonia",
+        "region_short_name": "ee",
+        "region_cn": "爱沙尼亚"
+    },
+    {
+        "region_id": 68,
+        "region_name": "Finland",
+        "region_short_name": "fi",
+        "region_cn": "芬兰"
+    },
+    {
+        "region_id": 69,
+        "region_name": "France",
+        "region_short_name": "fr",
+        "region_cn": "法国"
+    },
+    {
+        "region_id": 75,
+        "region_name": "Georgia",
+        "region_short_name": "ge",
+        "region_cn": "格鲁吉亚"
+    },
+    {
+        "region_id": 76,
+        "region_name": "Germany",
+        "region_short_name": "de",
+        "region_cn": "德国"
+    },
+    {
+        "region_id": 77,
+        "region_name": "Ghana",
+        "region_short_name": "gh",
+        "region_cn": "加纳"
+    },
+    {
+        "region_id": 79,
+        "region_name": "Greece",
+        "region_short_name": "gr",
+        "region_cn": "希腊"
+    },
+    {
+        "region_id": 83,
+        "region_name": "Guam",
+        "region_short_name": "gu",
+        "region_cn": "关岛"
+    },
+    {
+        "region_id": 84,
+        "region_name": "Guatemala",
+        "region_short_name": "gt",
+        "region_cn": "危地马拉"
+    },
+    {
+        "region_id": 89,
+        "region_name": "Honduras",
+        "region_short_name": "hn",
+        "region_cn": "洪都拉斯"
+    },
+    {
+        "region_id": 90,
+        "region_name": "Hungary",
+        "region_short_name": "hu",
+        "region_cn": "匈牙利"
+    },
+    {
+        "region_id": 91,
+        "region_name": "Iceland",
+        "region_short_name": "is",
+        "region_cn": "冰岛"
+    },
+    {
+        "region_id": 96,
+        "region_name": "Ireland",
+        "region_short_name": "ie",
+        "region_cn": "爱尔兰"
+    },
+    {
+        "region_id": 97,
+        "region_name": "Israel",
+        "region_short_name": "il",
+        "region_cn": "以色列"
+    },
+    {
+        "region_id": 98,
+        "region_name": "Italy",
+        "region_short_name": "it",
+        "region_cn": "意大利"
+    },
+    {
+        "region_id": 99,
+        "region_name": "Jamaica",
+        "region_short_name": "jm",
+        "region_cn": "牙买加"
+    },
+    {
+        "region_id": 100,
+        "region_name": "Japan",
+        "region_short_name": "jp",
+        "region_cn": "日本"
+    },
+    {
+        "region_id": 101,
+        "region_name": "Jordan",
+        "region_short_name": "jo",
+        "region_cn": "约旦"
+    },
+    {
+        "region_id": 102,
+        "region_name": "Kazakhstan",
+        "region_short_name": "kz",
+        "region_cn": "哈萨克斯坦"
+    },
+    {
+        "region_id": 105,
+        "region_name": "Kuwait",
+        "region_short_name": "kw",
+        "region_cn": "科威特"
+    },
+    {
+        "region_id": 106,
+        "region_name": "Kyrgyzstan",
+        "region_short_name": "kg",
+        "region_cn": "吉尔吉斯斯坦"
+    },
+    {
+        "region_id": 108,
+        "region_name": "Latvia",
+        "region_short_name": "lv",
+        "region_cn": "拉脱维亚"
+    },
+    {
+        "region_id": 112,
+        "region_name": "Liechtenstein",
+        "region_short_name": "li",
+        "region_cn": "列支敦士登"
+    },
+    {
+        "region_id": 113,
+        "region_name": "Lithuania",
+        "region_short_name": "lt",
+        "region_cn": "立陶宛"
+    },
+    {
+        "region_id": 114,
+        "region_name": "Luxembourg",
+        "region_short_name": "lu",
+        "region_cn": "卢森堡"
+    },
+    {
+        "region_id": 119,
+        "region_name": "Malaysia",
+        "region_short_name": "my",
+        "region_cn": "马来西亚"
+    },
+    {
+        "region_id": 120,
+        "region_name": "Maldives",
+        "region_short_name": "mv",
+        "region_cn": "马尔代夫"
+    },
+    {
+        "region_id": 122,
+        "region_name": "Malta",
+        "region_short_name": "mt",
+        "region_cn": "马耳他"
+    },
+    {
+        "region_id": 126,
+        "region_name": "Mauritius",
+        "region_short_name": "mu",
+        "region_cn": "毛里求斯"
+    },
+    {
+        "region_id": 128,
+        "region_name": "Mexico",
+        "region_short_name": "mx",
+        "region_cn": "墨西哥"
+    },
+    {
+        "region_id": 130,
+        "region_name": "Moldova",
+        "region_short_name": "md",
+        "region_cn": "摩尔多瓦"
+    },
+    {
+        "region_id": 132,
+        "region_name": "Mongolia",
+        "region_short_name": "mn",
+        "region_cn": "蒙古"
+    },
+    {
+        "region_id": 134,
+        "region_name": "Montenegro",
+        "region_short_name": "me",
+        "region_cn": "黑山"
+    },
+    {
+        "region_id": 135,
+        "region_name": "Morocco",
+        "region_short_name": "ma",
+        "region_cn": "摩洛哥"
+    },
+    {
+        "region_id": 141,
+        "region_name": "Netherlands",
+        "region_short_name": "nl",
+        "region_cn": "荷兰"
+    },
+    {
+        "region_id": 144,
+        "region_name": "New Zealand",
+        "region_short_name": "nz",
+        "region_cn": "新西兰"
+    },
+    {
+        "region_id": 147,
+        "region_name": "Nigeria",
+        "region_short_name": "ng",
+        "region_cn": "尼日利亚"
+    },
+    {
+        "region_id": 236,
+        "region_name": "Northern Mariana Islands",
+        "region_short_name": "mp",
+        "region_cn": "北马里亚纳群岛"
+    },
+    {
+        "region_id": 116,
+        "region_name": "North Macedonia",
+        "region_short_name": "mk",
+        "region_cn": "北马其顿"
+    },
+    {
+        "region_id": 151,
+        "region_name": "Norway",
+        "region_short_name": "no",
+        "region_cn": "挪威"
+    },
+    {
+        "region_id": 152,
+        "region_name": "Oman",
+        "region_short_name": "om",
+        "region_cn": "阿曼"
+    },
+    {
+        "region_id": 153,
+        "region_name": "Pakistan",
+        "region_short_name": "pk",
+        "region_cn": "巴基斯坦"
+    },
+    {
+        "region_id": 156,
+        "region_name": "Panama",
+        "region_short_name": "pa",
+        "region_cn": "巴拿马"
+    },
+    {
+        "region_id": 158,
+        "region_name": "Paraguay",
+        "region_short_name": "py",
+        "region_cn": "巴拉圭"
+    },
+    {
+        "region_id": 159,
+        "region_name": "Peru",
+        "region_short_name": "pe",
+        "region_cn": "秘鲁"
+    },
+    {
+        "region_id": 160,
+        "region_name": "Philippines",
+        "region_short_name": "ph",
+        "region_cn": "菲律宾"
+    },
+    {
+        "region_id": 162,
+        "region_name": "Poland",
+        "region_short_name": "pl",
+        "region_cn": "波兰"
+    },
+    {
+        "region_id": 163,
+        "region_name": "Portugal",
+        "region_short_name": "pt",
+        "region_cn": "葡萄牙"
+    },
+    {
+        "region_id": 164,
+        "region_name": "Puerto Rico",
+        "region_short_name": "pr",
+        "region_cn": "波多黎各"
+    },
+    {
+        "region_id": 165,
+        "region_name": "Qatar",
+        "region_short_name": "qa",
+        "region_cn": "卡塔尔"
+    },
+    {
+        "region_id": 185,
+        "region_name": "Republic of Korea",
+        "region_short_name": "kr",
+        "region_cn": "大韩民国（韩国）"
+    },
+    {
+        "region_id": 167,
+        "region_name": "Romania",
+        "region_short_name": "ro",
+        "region_cn": "罗马尼亚"
+    },
+    {
+        "region_id": 174,
+        "region_name": "Saudi Arabia",
+        "region_short_name": "sa",
+        "region_cn": "沙特阿拉伯"
+    },
+    {
+        "region_id": 175,
+        "region_name": "Serbia",
+        "region_short_name": "rs",
+        "region_cn": "塞尔维亚"
+    },
+    {
+        "region_id": 180,
+        "region_name": "Slovakia",
+        "region_short_name": "sk",
+        "region_cn": "斯洛伐克"
+    },
+    {
+        "region_id": 181,
+        "region_name": "Slovenia",
+        "region_short_name": "si",
+        "region_cn": "斯洛文尼亚"
+    },
+    {
+        "region_id": 184,
+        "region_name": "South Africa",
+        "region_short_name": "za",
+        "region_cn": "南非"
+    },
+    {
+        "region_id": 186,
+        "region_name": "Spain",
+        "region_short_name": "es",
+        "region_cn": "西班牙"
+    },
+    {
+        "region_id": 187,
+        "region_name": "Sri Lanka",
+        "region_short_name": "lk",
+        "region_cn": "斯里兰卡"
+    },
+    {
+        "region_id": 191,
+        "region_name": "Sweden",
+        "region_short_name": "se",
+        "region_cn": "瑞典"
+    },
+    {
+        "region_id": 192,
+        "region_name": "Switzerland",
+        "region_short_name": "ch",
+        "region_cn": "瑞士"
+    },
+    {
+        "region_id": 197,
+        "region_name": "Thailand",
+        "region_short_name": "th",
+        "region_cn": "泰国"
+    },
+    {
+        "region_id": 201,
+        "region_name": "Trinidad and Tobago",
+        "region_short_name": "tt",
+        "region_cn": "特立尼达和多巴哥"
+    },
+    {
+        "region_id": 203,
+        "region_name": "Türkiye",
+        "region_short_name": "tr",
+        "region_cn": "土耳其"
+    },
+    {
+        "region_id": 208,
+        "region_name": "Ukraine",
+        "region_short_name": "ua",
+        "region_cn": "乌克兰"
+    },
+    {
+        "region_id": 209,
+        "region_name": "United Arab Emirates",
+        "region_short_name": "ae",
+        "region_cn": "阿拉伯联合酋长国（阿联酋）"
+    },
+    {
+        "region_id": 210,
+        "region_name": "United Kingdom",
+        "region_short_name": "uk",
+        "region_cn": "英国"
+    },
+    {
+        "region_id": 211,
+        "region_name": "United States",
+        "region_short_name": "us",
+        "region_cn": "美国"
+    },
+    {
+        "region_id": 212,
+        "region_name": "Uruguay",
+        "region_short_name": "uy",
+        "region_cn": "乌拉圭"
+    },
+    {
+        "region_id": 213,
+        "region_name": "Uzbekistan",
+        "region_short_name": "uz",
+        "region_cn": "乌兹别克斯坦"
+    },
+    {
+        "region_id": 217,
+        "region_name": "Vietnam",
+        "region_short_name": "vn",
+        "region_cn": "越南"
+    },
+    {
+        "region_id": 219,
+        "region_name": "Virgin Islands (U.S.)",
+        "region_short_name": "vi",
+        "region_cn": "美属维尔京群岛"
+    }
+]
 // 重写alert
 function injectFn() {
     let link;
@@ -14,6 +656,19 @@ function injectFn() {
     link.setAttribute('src', p)
     document.querySelector('head').insertBefore(link, document.querySelector('head').firstChild)
     console.log("植入成功")
+}
+// 节流
+function throttle(fn) {
+    let timer;
+    return function() {
+        if (timer) {
+            clearTimeout(timer)
+        }
+        timer = setTimeout(() => {
+            // 两秒没问题再调用
+            fn.call(this)
+        }, 2000);
+    }
 }
 injectFn()
 if (tiktokUrl.test(current_url)) {
@@ -688,6 +1343,209 @@ async function initData() {
                 await delayFn(1500)
             }
             localStorage.setItem('start', false)
+        }
+    }
+    else if (/http:\/\/omsbackend\.jaspers\.com\.cn:16017\/outbound/.test(current_url)) {
+        // 这个地方要插入一个按钮在屏幕
+        let show_btn = document.createElement('textarea')
+        show_btn.setAttribute('placeholder', "请输入地址")
+        show_btn.classList.add('write_btn')
+        // 因为不是https 所以得用这个
+        show_btn.onchange = function() {
+            if (this.value.trim()) {
+                let arr = this.value.split('\n')
+                console.log(arr,'233')
+                let name = arr[0]
+                let addressList = arr[1].split(',')
+                let country = addressList[0]
+                let province = addressList[1]
+                province = USA_map[province.toUpperCase()]
+                let city = addressList[2]
+                let address = addressList[3]
+                let code = arr[2]
+                let phone = arr[3]
+                // el-id-6-252
+                let name_el = document.querySelector('input[placeholder="收货人"]')
+                name_el.value = name
+                // 触发dom的改变事件, dispatch就是派发事件用的,这个是强制触发修改,让浏览器知道这个是人为的,不是机器
+                name_el.dispatchEvent(new Event('input', { bubbles: true }))
+                name_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let code_el = document.querySelector('input[placeholder="邮编"]')
+                code_el.value = code
+                code_el.dispatchEvent(new Event('input', { bubbles: true }))
+                code_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let phone_el = document.querySelector('input[placeholder="手机号"]')
+                phone_el.value = phone
+                phone_el.dispatchEvent(new Event('input', { bubbles: true }))
+                phone_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let city_el = document.querySelector('input[placeholder="城市"]')
+                city_el.value = city
+                city_el.dispatchEvent(new Event('input', { bubbles: true }))
+                city_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let province_el = document.querySelector('input[placeholder="州或省"]')
+                province_el.value = province
+                province_el.dispatchEvent(new Event('input', { bubbles: true }))
+                province_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let country_el = document.querySelector('input[placeholder="国家"]')
+                country_el.value = country
+                country_el.dispatchEvent(new Event('input', { bubbles: true }))
+                country_el.dispatchEvent(new Event('change', { bubbles: true }))
+                let address_el = document.querySelector('input[placeholder="详细地址行1"]')
+                address_el.value = address
+                address_el.dispatchEvent(new Event('input', { bubbles: true}))
+                address_el.dispatchEvent(new Event('change', { bubbles: true}))
+            }
+        }
+        document.body.appendChild(show_btn)
+    }
+    else if (/https:\/\/agentseller\.temu\.com\/goods\/list/.test(current_url)) {
+        let timer = null;
+        let countryUrl = 'https://www.temu.com/api/bg/huygens/region/list'
+        let UrlParams = {
+            scene: 5
+        }
+        let rows = document.querySelectorAll('tr[data-testid="beast-core-table-body-tr"]')
+        let updateBtn = document.createElement('button')
+        updateBtn.innerText = '激活在售按钮跳转'
+        updateBtn.classList.add('active_show_btn')
+        updateBtn.onclick = () => {
+            rows = document.querySelectorAll('tr[data-testid="beast-core-table-body-tr"]')
+            initBtnActive()
+        }
+        // 默认先调用一次
+        initBtnActive()
+        function initBtnActive() {
+            timer = setInterval(() => {
+                if (!rows.length) {
+                    rows = document.querySelectorAll('tr[data-testid="beast-core-table-body-tr"]')
+                    return
+                }
+                if (rows.length) {
+                    console.log('我有数据了', rows)
+                    let btnContainer = document.querySelector('.index-module__col-query-btn-wrapper___U5ioq')
+                    let updateBtn_active = document.querySelector('.active_show_btn')
+                    if (!updateBtn_active) {
+                        btnContainer.appendChild(updateBtn)
+                    }
+                    clearInterval(timer)
+                    rows.forEach(row => {
+                        let tds = row.querySelectorAll('td')
+                        let score_td = tds[1]
+                        if (!score_td) {
+                            return
+                        }
+                        // 看里面有没有我要的 skc
+                        let Spu_item = score_td.querySelector('.product-info_idContent__iDukx')
+                        if (Spu_item) {
+                            let show_el = score_td.querySelectorAll('div[data-testid="beast-core-box"]')
+                            // 在售 看有咩有
+                            if (show_el.length) {
+                                async function get_spu_id(country, spu) {
+                                    let id = localStorage.getItem('agentseller-mall-info-id')
+                                    // 去拿数据
+                                    let resp = await fetch('https://agentseller.temu.com/visage-agent-seller/product/skc/pageQuery', {
+                                        method: 'post',
+                                        headers: {
+                                            'content-type': 'application/json',
+                                            'mallid': id
+                                        },
+                                        body: JSON.stringify({
+                                            "productIds": [
+                                                spu.innerText.split('\n')[1]
+                                            ],
+                                            "page": 1,
+                                            "pageSize": 20
+                                            })
+                                    }).then(res => res.json())
+                                    console.log(resp,'结果')
+                                    if (resp.success) {
+                                        // 有数据
+                                        let result = resp.result
+                                        let result_item = result.pageItems[0]
+                                        // 跳转
+                                        let goods_id = result_item.goodsId
+                                        if (country == 'us') {
+                                            window.open(`http://temu.com/#zx&` + goods_id)
+                                        } else {
+                                            window.open(`http://temu.com/#zx&${country}&` + goods_id)
+                                        }
+                                    }
+                                }
+                                show_el.forEach(show => {
+                                    let v = show.innerText
+                                    if (v == '在售') {
+                                        let ulEl = document.createElement('ul')
+                                        ulEl.classList = 'country_list'
+                                        // 好玩 监听滚动 然后把默认的滚动给关掉 然后设置他滚动的方向 可以实现直接横向滚动
+                                        ulEl.addEventListener('wheel', (e) => {
+                                            e.preventDefault(); // 阻止默认纵向滚动
+                                            ulEl.scrollBy({
+                                              left: e.deltaY, // 把滚轮纵向位移转为横向滚动
+                                              behavior: 'smooth'
+                                            });
+                                        })
+                                        let str = ''
+                                        country_map.forEach(country => {
+                                            str += `<li class="list_items">${country.region_cn}</li>`
+                                        })
+                                        ulEl.innerHTML = str
+                                        show.style.backgroundColor = 'red'
+                                        show.style.cursor = 'pointer'
+                                        show.style.position = 'relative'
+                                        show.parentElement.appendChild(ulEl)
+                                        let search_el = document.createElement('input')
+                                        search_el.classList.add('search_el_ipt')
+                                        search_el.setAttribute('placeholder', '搜索关键词')
+                                        let lis_list = document.querySelectorAll('.list_items')
+                                        // 绑定点击事件
+                                        lis_list.forEach(li => {
+                                            li.onclick = function() {
+                                                let item = country_map.find(c => c.region_cn == this.innerText)
+                                                if (item) {
+                                                    get_spu_id(item.region_short_name, Spu_item)
+                                                }
+                                            }
+                                        })
+                                        search_el.addEventListener('input', throttle(function() {
+                                            str = ''
+                                            // 在这里去操作
+                                            console.log('用户输入的是', this.value)
+                                            if (this.value) {
+                                                country_map.forEach(country => {
+                                                    if (country.region_cn.includes(this.value)) {
+                                                        str += `<li class="list_items">${country.region_cn}</li>`
+                                                    }
+                                                })
+                                            } else {
+                                                country_map.forEach(country => {
+                                                    str += `<li class="list_items">${country.region_cn}</li>`
+                                                })
+                                            }
+                                            let current_ul = this.previousElementSibling
+                                            current_ul.innerHTML = str
+                                            let lis_list = document.querySelectorAll('.list_items')
+                                            // 绑定点击事件
+                                            lis_list.forEach(li => {
+                                                li.onclick = function() {
+                                                    let item = country_map.find(c => c.region_cn == this.innerText)
+                                                    if (item) {
+                                                        get_spu_id(item.region_short_name, Spu_item)
+                                                    }
+                                                }
+                                            })
+                                        }))
+                                        show.parentElement.appendChild(search_el)
+                                        console.log('找到了,跳转百度')
+                                        show.onclick = async function() {
+                                            get_spu_id('us', Spu_item)
+                                        }
+                                    }
+                                })
+                            }
+                        }
+                    })
+                }
+            }, 1500);
         }
     }
 }

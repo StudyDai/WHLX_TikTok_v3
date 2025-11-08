@@ -74,3 +74,24 @@ window.XMLHttpRequest = function () {
     };
     return xhr;
 }
+
+if (location.href.includes('#zx')) {
+    // 清理数据,准备刷新
+    console.log('是从temu后台过来的')
+    let arr = location.href.split('&')
+    // 把cookies去掉
+    let cookies = document.cookie.split(';')
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i];
+        var eqPos = cookie.indexOf("=");
+        var cookie_name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        // 直接让cookie过期
+        console.log('来没来的我')
+        document.cookie = cookie_name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
+    if (arr.length == 2) {
+        location.replace(`https://www.temu.com/us-es/g-${arr[1]}.html`)
+    } else {
+        location.replace(`https://www.temu.com/${arr[1]}/g-${arr[2]}.html`)
+    }
+}
