@@ -1,5 +1,5 @@
 // 要用这个的话 不可以使用ES module的模式 所以要把model改掉
-// importScripts(chrome.runtime.getURL('js/xlsx.js'))
+importScripts(chrome.runtime.getURL('js/xlsx.js'))
 const utils = require('@/utils/utils').default
 const instance = require('@/utils/instance').default
 let TIKTOK_BUSINESS_ACCOUNT = 'tiktokbusinessaccount'
@@ -7,6 +7,7 @@ let TIKTOK_BUSINESS_ROI_DATA = 'tiktokbusinessroidata'
 let TIKTOK_BUSINESS_MS_TOKEN = 'tiktokbueinessmstoken'
 let TIKTOK_BUSINESS_ADVERTISEMENT = 'tiktokbusinessadvertisement'
 let tiktok_advertisement = []
+let moneyNum = 0
 // // 德国仓 - 登录
 const LingXingErp_Login_GETTOKEN = async function(data) {
     let params = Object.assign(data, {
@@ -337,12 +338,537 @@ chrome.runtime.onMessage.addListener(async (params, sender, sendResponse) => {
                 await utils.delayFn()
             }
         }
-        const resp = await await utils.request(instance.Local_SAVE_XLSX, "post", {
-            body: data.outData,
-            headers: {
-                'content-type': 'application/json'
-            }
+        // const resp = await await utils.request(instance.Local_SAVE_XLSX, "post", {
+        //     body: data.outData,
+        //     headers: {
+        //         'content-type': 'application/json'
+        //     }
+        // })
+    }
+    else if (params.message === 'download_TEMU_Pic') {
+        const size = params.size
+        switch (size) {
+            case '180':
+            case '800':
+                const currentT = new Date().getTime()
+                for (let index = 0; index < params.downloadList.length; index++) {
+                    const downloadItem = params.downloadList[index]
+                    console.log(downloadItem)
+                    chrome.downloads.download({
+                        url: downloadItem[size],
+                        saveAs: false,
+                        filename: `${currentT}TEMU商品图/${downloadItem.imgName}`,
+                        conflictAction: 'uniquify'
+                    })
+                    await utils.delayFn()
+                }
+                break;
+            default:
+                console.log('暂无对应的资源下载')
+        }
+    }
+    else if (params.message == 'download_TEMU_Video') {
+        chrome.downloads.download({
+            url: params.videoHref,
+            saveAs: false,
+            filename: `视频.mp4`,
+            conflictAction: 'uniquify'
         })
+    }
+    else if (params.message == 'updateMoney') {
+        let money_data = JSON.parse(params.data)
+        moneyNum = money_data.num
+        if (money_data.dw != 'CNY') {
+            moneyNum = money_data.num * 7.19
+        }
+        utils.persistent.addLocalStorage('money_num', moneyNum)
+    }
+    else if (params.message == 'download_TEMU_totalData') {
+        topThreeArr = []
+        moneyNum = await utils.persistent.getLocalStorage('money_num')
+        console.log('第九个需求,七天回款: (解决)', moneyNum)
+        let mallid = await utils.persistent.getLocalStorage('temu_mallid')
+        // 导出数据
+        let show_url = 'https://agentseller.temu.com/mms/venom/api/supplier/sales/management/listWarehouse'
+        // 这个地方要拿俩部分 一个是JIT还有一个就是库存大于1的
+        // 这个是筛JIT的
+        let jit_params = {
+            "pageNo": 1,
+            "pageSize": 10,
+            "isLack": 0,
+            "purchaseStockType": 1,
+            "selectStatusList": [
+              12
+            ],
+            "priceAdjustRecentDays": 7
+        }
+        let resp = await fetch(show_url, {
+            method: 'POST',
+            body: JSON.stringify(jit_params),
+            headers: {
+                'content-type': 'application/json',
+                'mallid': mallid
+            }
+        }).then(res => res.json())
+        console.log('结果', resp)
+        if (resp.success) {
+            // 成了 看看数据
+            let total = resp.result.total
+            let save_total = 0
+            // 拿加入站点而且库存是大于等于1的
+            jit_params = {
+                "pageNo": 1,
+                "pageSize": 10,
+                "isLack": 0,
+                "selectStatusList": [
+                  12
+                ],
+                "priceAdjustRecentDays": 7,
+                "maxRemanentInventoryNum": 1
+            }
+            resp = await fetch(show_url, {
+                method: 'POST',
+                body: JSON.stringify(jit_params),
+                headers: {
+                    'content-type': 'application/json',
+                    'mallid': mallid
+                }
+            }).then(res => res.json())
+            if (resp.success) { 
+                // 可以,都拿到了 看看拿到啥
+                total += resp.result.total
+                console.log('第一个需求,在售数量: (解决)', total)
+                // 第二个需求
+                let move_rate_url = 'https://agentseller.temu.com/bg-brando-mms/supplier/data/center/skc/sales/data'
+                // 先得到今天的时间
+                let today = new Date()
+                // 年月份
+                let year = today.getFullYear()
+                let month = today.getMonth() + 1 < 10 ? `0${today.getMonth() + 1}` : today.getMonth() + 1
+                let date = today.getDate() - 1 < 10 ?  `0${today.getDate() - 1}` : today.getDate() - 1
+                // 前七天
+                let prevDay = new Date(new Date().setDate(today.getDate() - 6))
+                let prevyear = prevDay.getFullYear()
+                let prevmonth = prevDay.getMonth() + 1 < 10 ? `0${prevDay.getMonth() + 1}` : prevDay.getMonth() + 1
+                let prevdate = prevDay.getDate() < 10 ?  `0${prevDay.getDate()}` : prevDay.getDate() - 1
+                resp = await fetch(move_rate_url, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        "regionIdList": [
+                            -1
+                        ],
+                        "select": 2,
+                        "startDate": `${prevyear}-${prevmonth}-${prevdate}`,
+                        "endDate": `${year}-${month}-${date}`,
+                        "page": 1,
+                        "pageSize": 100
+                    }),
+                    headers: {
+                        'content-type': 'application/json',
+                        'mallid': mallid
+                    }
+                }).then(res => res.json())
+                if (resp.success) {
+                    // 这个地方拿一下前三
+                    for (let index = 0; index < 3; index++) {
+                        const element = resp.result.salesDataVOList[index];
+                        const sku = element.productSkcBasicInfoVO.skcExtCode
+                        const spu = element.productSkcBasicInfoVO.productId
+                        const element_num = element.confirmGoodsQuantity
+                        topThreeArr = topThreeArr.concat({
+                            sku,
+                            element_num,
+                            spu
+                        })
+                    }
+                    // 成功了
+                    save_total = resp.result.total
+                    // 算那个动销率
+                    let can_sale_rate = save_total / total * 100 + '%'
+                    console.log('第二个需求,动销率: (解决)', can_sale_rate)
+                    // 销售额
+                    console.log("第十个需求, 销售额", moneyNum)
+                    // 完事了 下一个功能 近七天的金额流入数量 这个先不管了
+                    // 下一个功能 也是在这个地方操作
+                    let totalData = resp.result.salesDataVOList
+                    // 循环累加总销量
+                    let totalSale = 0
+                    for (let index = 0; index < totalData.length; index++) {
+                        const element = totalData[index];
+                        totalSale += element.confirmGoodsQuantity
+                    }
+                    console.log('第四个需求,近七天总销量: (解决)', totalSale)
+                    // 客单价
+                    let customerPrice = (moneyNum / totalSale).toFixed(2)
+                    console.log('第十一个需求,客单价: (解决)', customerPrice)
+                    // 下一个功能
+                    // 开始时间,今天的前俩天
+                    let sDay = new Date(new Date().setDate(today.getDate() - 1))
+                    let sprevyear = sDay.getFullYear()
+                    let sprevmonth = sDay.getMonth() + 1 < 10 ? `0${sDay.getMonth() + 1}` : sDay.getMonth() + 1
+                    let sprevdate = sDay.getDate() < 10 ?  `0${sDay.getDate()}` : sDay.getDate() - 1
+                    let ssDay = new Date(new Date().setDate(sDay.getDate() - 6))
+                    let ssprevyear = ssDay.getFullYear()
+                    let ssprevmonth = ssDay.getMonth() + 1 < 10 ? `0${ssDay.getMonth() + 1}` : ssDay.getMonth() + 1
+                    let ssprevdate = ssDay.getDate() < 10 ?  `0${ssDay.getDate()}` : ssDay.getDate() - 1
+                    let shop_url = 'https://agentseller.temu.com/api/seller/full/flow/analysis/mall/list'
+                    let params_list = {
+                        "pageSize": 30,
+                        "pageNum": 1,
+                        "statTimeDimension": 2,
+                        "startDate": `${ssprevyear}-${ssprevmonth}-${ssprevdate}`,
+                        "endDate": `${sprevyear}-${sprevmonth}-${sprevdate}`
+                    }
+                    resp = await fetch(shop_url, {
+                        method: 'POST',
+                        body: JSON.stringify(params_list),
+                        headers: {
+                            'content-type': 'application/json',
+                            'mallid': mallid
+                        }
+                    }).then(res => res.json())
+                    if (resp.success) {
+                        // 开始
+                        let shopData = resp.result.list[0]
+                        // 总预览量
+                        let totalView = shopData.totalPageView
+                        // 总访客数
+                        let totalVistor = shopData.totalVisitorsNum
+                        // 总支付买家数
+                        let totalSaleNum = shopData.totalPayBuyerNum
+                        // 总支付转化率
+                        let totalRate = (shopData.totalExposePayConversionRate * 100).toFixed(2)
+                        // 总支付件数
+                        let totalPay = shopData.totalPayGoodsNum
+                        // 商品浏览量
+                        let goodView = shopData.goodsPageView
+                        // 商品访客数
+                        let goodVistor = shopData.goodsVisitorsNum
+                        // 详情页下单买家数
+                        let detailNum = shopData.goodsDetailPayBuyerNum
+                        // 详情页下单的转化率
+                        let detailRateNum = (shopData.goodsDetailPayConversionRate * 100).toFixed(2)
+                        // 搞定
+                        console.log('第五个需求,商家的各项数据: (解决)', totalView,totalVistor,totalSaleNum,totalRate,totalPay,goodView,goodVistor,detailNum,detailRateNum)
+                        // 销量前三的SKU和销量
+                        let sort_url = 'https://agentseller.temu.com/bg-luna-agent-seller/review/pageQuery'
+                        let endT = new Date(`${year}-${month}-${date} 23:59:59`).getTime() + ''
+                        let sort_list = {
+                            "page": 1,
+                            "pageSize": 100,
+                            "endCreateTime": endT.substring(0, 10) + '999',
+                            "startCreateTime": new Date(`${prevyear}-${prevmonth}-${prevdate} 00:00:00`).getTime(),
+                            "scoreList": [
+                                1,
+                                2,
+                                3
+                            ]
+                        }
+                        resp = await fetch(sort_url, {
+                            method: 'POST',
+                            body: JSON.stringify(sort_list),
+                            headers: {
+                                'content-type': 'application/json',
+                                'mallid': mallid
+                            }
+                        }).then(res => res.json())
+                        if (resp.success) {
+                            let len = resp.result.total
+                            console.log('第六个需求,商家的差评: (解决)', len)
+                            resp = await fetch('https://agentseller-us.temu.com/bg-luna-agent-seller/review/pageQuery', {
+                                method: 'POST',
+                                body: JSON.stringify(sort_list),
+                                headers: {
+                                    'content-type': 'application/json',
+                                    'mallid': mallid
+                                }
+                            }).then(res => res.json())
+                            if (resp.success) {
+                                // 第七个需求
+                                let len2 = resp.result.total
+                                console.log('第七个需求,商家的差评: (解决)', len2)
+                                resp = await fetch('https://agentseller-eu.temu.com/bg-luna-agent-seller/review/pageQuery', {
+                                    method: 'POST',
+                                    body: JSON.stringify(sort_list),
+                                    headers: {
+                                        'content-type': 'application/json',
+                                        'mallid': mallid
+                                    }
+                                }).then(res => res.json())
+                                if (resp.success) {
+                                    // 第八个需求
+                                    let len3 = resp.result.total
+                                    console.log('第八个需求,商家的差评: (解决)', len3)
+                                    // 导出表
+                                    let currentY = new Date()
+                                    let cy = currentY.getFullYear()
+                                    let cm = currentY.getMonth() + 1
+                                    let cd = currentY.getDate()
+                                    // 七天前
+                                    let prevY = new Date(new Date().setDate(cd - 6))
+                                    let py = prevY.getFullYear()
+                                    let pm = prevY.getMonth() + 1
+                                    let pd = prevY.getDate()
+                                    // 时间
+                                    // // 数据
+                                    let ws = [['日期', '在售数量/单','动销率','销售额/人民币','订单量/单','客单价/元','总预览量','总访客数','总支付买家数','总支付转化率','总支付件数','商品浏览量','商品访客数','详情页下单买家数','详情页下单的转化率','全球差评数(近七天)','美区差评数(近七天)', '欧区差评数(近七天)', '第一个产品货号','第一个产品SPU', '近七天销量','第二个产品货号', '第二个产品SPU', '近七天销量', '第三个产品货号', '第三个产品SPU', '近七天销量']]
+                                    ws = ws.concat([[`${cy}-${cm}-${cd} / ${py}-${pm}-${pd}`, total, can_sale_rate, moneyNum, totalSale, customerPrice, totalView,totalVistor,totalSaleNum,totalRate + '%',totalPay,goodView,goodVistor,detailNum,detailRateNum + '%', len, len2, len3, topThreeArr[0].sku, topThreeArr[0].spu, topThreeArr[0].element_num,topThreeArr[1].sku, topThreeArr[1].spu, topThreeArr[1].element_num,topThreeArr[2].sku, topThreeArr[2].spu, topThreeArr[2].element_num]])
+                                    resp = await await utils.request(instance.Local_SAVE_XLSX, "post", {
+                                        body: JSON.stringify({
+                                            data: JSON.stringify(ws),
+                                            mallid: mallid
+                                        }),
+                                        headers: {
+                                            'content-type': 'application/json'
+                                        }
+                                    })
+                                    console.log(resp, '是什么')
+                                    if (resp.code == 200) {
+                                        chrome.downloads.download({
+                                            url: resp.data,
+                                            filename: "TEMU数据/temu7天数据表.xlsx",
+                                            conflictAction: "uniquify",
+                                            saveAs: false,
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (params.message == 'downloadTikTokXlsx') {
+        let downloadXlsx = [['时间','广告户名称', '订单', '消耗/USD']]
+        // 看看
+        let downloadData = JSON.parse(params.data)
+        console.log(downloadData)
+        let keys = Object.keys(downloadData)
+        console.log(keys)
+        let roi_url = "https://ads.tiktok.com/api/oec_shopping/v1/oec/stat/post_overview_stat?locale=zh&language=zh&bc_id=7490498299846361105"
+        let bec_seller_url = "https://business.tiktok.com/api/v3/bm/account/gmv_max/?org_id=7490498299846361105&attr_source=&source_biz_id=&attr_type=web&account_type=1"
+        if (keys.length <= 1) {
+            let tiktokData = downloadData[keys[0]]
+            // 开整
+            bec_seller_url += `&account_id=${tiktokData.account_id}&shop_owner_id=${tiktokData.owner_id}`
+            let resp = await utils.request(bec_seller_url, "get")
+            if (resp.msg === 'success') {
+                // 这个是拿到当前的所有广告计划的 然后campaign_opt_status等于1是关闭,等于0是开启 暂时先不用
+                // 证明拿到了id值,可以开始去拿roi数据了
+                let aaid = resp.data.accounts[0].account_id
+                // 这个是拿到每个广告的roi
+                roi_url += `&oec_seller_id=${aaid}&aadvid=${tiktokData.account_id}`
+                resp = await utils.request(roi_url, "post", {
+                    body: JSON.stringify({
+                        "query_list": [
+                        "cost",
+                        "onsite_roi2_shopping_sku",
+                        "cost_per_onsite_roi2_shopping_sku",
+                        "onsite_roi2_shopping_value",
+                        "onsite_roi2_shopping"
+                        ],
+                        "start_time": tiktokData.startTime,
+                        "end_time": tiktokData.endTime,
+                        "campaign_shop_automation_type": 2,
+                        "external_type_list": [
+                        "307",
+                        "304",
+                        "305"
+                        ]
+                    }),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                })
+                if (resp.data?.statistics) {
+                    // 看看
+                    console.log(resp.data,'看看')
+                    // 证明就是拿到数据了
+                    let data = resp.data.statistics
+                    let cost = data.cost // 消费成本
+                    let spend_rate = data.onsite_roi2_shopping // 投资回报率
+                    let get_order = data.onsite_roi2_shopping_sku // 出的单量
+                    let all_sell = data.onsite_roi2_shopping_value // 总收入
+                    let sell_rate = data.cost_per_onsite_roi2_shopping_sku // 平均下单的成本 也就是roi
+                    // 这个是总的, 所以要弄一个数组来存
+                    let all_time = `${tiktokData.startTime}-${tiktokData.endTime}`
+                    downloadXlsx = downloadXlsx.concat([[all_time, tiktokData.name, get_order, cost]])
+                    // 这个地方开始循环去拿
+                    let startTimeStramp = new Date(tiktokData.startTime).getTime()
+                    let endTimeStramp = new Date(tiktokData.endTime).getTime()
+                    while(startTimeStramp <= endTimeStramp) {
+                        // 开搞
+                        let searchTime = utils.formatDate(new Date(startTimeStramp),"yyyy-MM-dd")
+                        resp = await utils.request(roi_url, "post", {
+                            body: JSON.stringify({
+                                "query_list": [
+                                "cost",
+                                "onsite_roi2_shopping_sku",
+                                "cost_per_onsite_roi2_shopping_sku",
+                                "onsite_roi2_shopping_value",
+                                "onsite_roi2_shopping"
+                                ],
+                                "start_time": searchTime,
+                                "end_time": searchTime,
+                                "campaign_shop_automation_type": 2,
+                                "external_type_list": [
+                                "307",
+                                "304",
+                                "305"
+                                ]
+                            }),
+                            headers: {
+                                'content-type': 'application/json'
+                            }
+                        })
+                        if (resp.data?.statistics) { 
+                            startTimeStramp += 86400000
+                            let data = resp.data.statistics
+                            let cost = data.cost
+                            let get_order = data.onsite_roi2_shopping_sku
+                            downloadXlsx = downloadXlsx.concat([[searchTime, tiktokData.name, get_order, cost]])
+                        }
+                        // 延迟下
+                        await utils.delayFn(1)
+                    }
+                    console.log('看看效果', downloadXlsx)
+                    if (downloadXlsx.length) {
+                        // 发给我的远程接口
+                        const resp = await utils.request(instance.Local_SAVE_XLSX_TK, "post", {
+                            body: JSON.stringify(downloadXlsx),
+                            headers: {
+                                'content-type': 'application/json'
+                            }
+                        })
+                        console.log(resp.data)
+                        if (resp.code == 200) {
+                            // 下载
+                            chrome.downloads.download({
+                                url: resp.data,
+                                filename: "tiktok实时数据/TikTok七天数据表.xlsx",
+                                conflictAction: "uniquify",
+                                saveAs: false,
+                            })
+                        }
+                    }
+                }
+            }
+            toActivePage('alreadyDownload')
+        } else {
+            // 多个的
+            for (let index = 0; index < keys.length; index++) {
+                let name = keys[index]
+                const element = downloadData[name];
+                roi_url = "https://ads.tiktok.com/api/oec_shopping/v1/oec/stat/post_overview_stat?locale=zh&language=zh&bc_id=7490498299846361105"
+                bec_seller_url = "https://business.tiktok.com/api/v3/bm/account/gmv_max/?org_id=7490498299846361105&attr_source=&source_biz_id=&attr_type=web&account_type=1"
+                bec_seller_url += `&account_id=${element.account_id}&shop_owner_id=${element.owner_id}`
+                let resp = await utils.request(bec_seller_url, "get")
+                if (resp.msg === 'success') {
+                    // 这个是拿到当前的所有广告计划的 然后campaign_opt_status等于1是关闭,等于0是开启 暂时先不用
+                    // 证明拿到了id值,可以开始去拿roi数据了
+                    let aaid = resp.data.accounts[0].account_id
+                    // 这个是拿到每个广告的roi
+                    roi_url += `&oec_seller_id=${aaid}&aadvid=${element.account_id}`
+                    resp = await utils.request(roi_url, "post", {
+                        body: JSON.stringify({
+                            "query_list": [
+                            "cost",
+                            "onsite_roi2_shopping_sku",
+                            "cost_per_onsite_roi2_shopping_sku",
+                            "onsite_roi2_shopping_value",
+                            "onsite_roi2_shopping"
+                            ],
+                            "start_time": element.startTime,
+                            "end_time": element.endTime,
+                            "campaign_shop_automation_type": 2,
+                            "external_type_list": [
+                            "307",
+                            "304",
+                            "305"
+                            ]
+                        }),
+                        headers: {
+                            'content-type': 'application/json'
+                        }
+                    })
+                    if (resp.data?.statistics) {
+                        // 看看
+                        console.log(resp.data,'看看')
+                        // 证明就是拿到数据了
+                        let data = resp.data.statistics
+                        let cost = data.cost // 消费成本
+                        let spend_rate = data.onsite_roi2_shopping // 投资回报率
+                        let get_order = data.onsite_roi2_shopping_sku // 出的单量
+                        let all_sell = data.onsite_roi2_shopping_value // 总收入
+                        let sell_rate = data.cost_per_onsite_roi2_shopping_sku // 平均下单的成本 也就是roi
+                        // 这个是总的, 所以要弄一个数组来存
+                        let all_time = `${element.startTime}-${element.endTime}`
+                        downloadXlsx = downloadXlsx.concat([[all_time, element.name, get_order, cost]])
+                        // 这个地方开始循环去拿
+                        let startTimeStramp = new Date(element.startTime).getTime()
+                        let endTimeStramp = new Date(element.endTime).getTime()
+                        while(startTimeStramp <= endTimeStramp) {
+                            // 开搞
+                            let searchTime = utils.formatDate(new Date(startTimeStramp),"yyyy-MM-dd")
+                            resp = await utils.request(roi_url, "post", {
+                                body: JSON.stringify({
+                                    "query_list": [
+                                    "cost",
+                                    "onsite_roi2_shopping_sku",
+                                    "cost_per_onsite_roi2_shopping_sku",
+                                    "onsite_roi2_shopping_value",
+                                    "onsite_roi2_shopping"
+                                    ],
+                                    "start_time": searchTime,
+                                    "end_time": searchTime,
+                                    "campaign_shop_automation_type": 2,
+                                    "external_type_list": [
+                                    "307",
+                                    "304",
+                                    "305"
+                                    ]
+                                }),
+                                headers: {
+                                    'content-type': 'application/json'
+                                }
+                            })
+                            if (resp.data?.statistics) { 
+                                startTimeStramp += 86400000
+                                let data = resp.data.statistics
+                                let cost = data.cost
+                                let get_order = data.onsite_roi2_shopping_sku
+                                downloadXlsx = downloadXlsx.concat([[searchTime, element.name, get_order, cost]])
+                            }
+                            // 延迟下
+                            await utils.delayFn(1)
+                        }
+                        console.log('看看效果', downloadXlsx)
+                    }
+                }
+                await utils.delayFn(1.5)
+            }
+            if (downloadXlsx.length) {
+                // 发给我的远程接口
+                const resp = await utils.request(instance.Local_SAVE_XLSX_TK, "post", {
+                    body: JSON.stringify(downloadXlsx),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                })
+                console.log(resp.data)
+                if (resp.code == 200) {
+                    toActivePage('alreadyDownload')
+                    // 下载
+                    chrome.downloads.download({
+                        url: resp.data,
+                        filename: "tiktok实时数据/TikTok七天数据表.xlsx",
+                        conflictAction: "uniquify",
+                        saveAs: false,
+                    })
+                }
+            }
+        }
     }
 })
 
@@ -351,6 +877,8 @@ function strongWait(fn) {
 
 }
 
+
+// 这个地方要去看我要拿哪个的数据
 // tiktok 申请所有的数据
 const get_TikTok_Data = async function() {
     let roi_data = {}, showStr = '', moneyStr = '';

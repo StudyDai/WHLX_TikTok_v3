@@ -28,18 +28,49 @@
                 </a-collapse>
             </div>
         </div>
+
+        <!-- 这个地方提供导出功能 -->
+        <a-button danger @click="getTikTokXlsx" class="get_data_btn">导出TK的订单和消耗xlsx表</a-button>
+        <a-button danger @click="tiktokTime = { startTime: null, endTime: null }" class="get_data_btn">重置时间</a-button>
+        <div class="tiktok_data_option">
+            这里是要展示的内容
+            <div class="input_item" v-for="(item, index) in currentDataShow" :key="index">
+                <div class="input_row start_time"><span>开始时间: </span><a-date-picker v-model:value="tiktokTime.startTime" style="width: 50%" /></div>
+                <div class="input_row end_time"><span>结束时间: </span><a-date-picker v-model:value="tiktokTime.endTime" style="width: 50%" /></div>
+                <div class="title_container">
+                    <div class="input_row title">{{ item.account_name }}</div>
+                    <a-button permary @click="updateTikTokList(item)" type="primary" ghost>确认修改</a-button>
+                    <a-button style="margin-left: 8px; border-color: #ff4d4f; color: #ff4d4f" shape="round" @click="dowloadItem(item)" type="primary" ghost>确认导出</a-button>
+                    <div class="sure_time">
+                        <a-tag v-if="updateTikTokData[item.account_name]" color="green">{{ updateTikTokData[item.account_name].startTime }}</a-tag>
+                        <a-tag v-if="updateTikTokData[item.account_name]" color="red">{{ updateTikTokData[item.account_name].endTime }}</a-tag>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 这个是加载 -->
+        <Loading v-show="downloadFileLoading" />
     </div>
   </template>
 <script setup>
 /* eslint-disable */
 import Mark from './mark.vue'
-import { onMounted, ref } from 'vue'
+import Loading from './loading.vue'
+import { onMounted, ref, reactive } from 'vue'
 import utils from '@/utils/utils.js'
 import { CloseOutlined } from '@ant-design/icons-vue';
 const loading = ref(false)
 let currentDataShow = ref(null)
 let open = ref(false)
 let updateList = ref(null)
+let tiktokTime = ref({
+    startTime: null,
+    endTime: null
+})
+let downloadFileLoading = ref(false)
+// 这个是总的
+let updateTikTokData = reactive({})
 let activeKey = ref(['1'])
 // 监听tk的广告
 let listenTikTokMax = () => {
@@ -134,6 +165,77 @@ const toUpdateadvertisement = (data) => {
 const toClose = () => {
     open.value = false
 }
+// 导出单个广告户
+const dowloadItem = (d) => {
+    downloadFileLoading.value = true
+    chrome.runtime.sendMessage({
+        message: 'downloadTikTokXlsx',
+        data: JSON.stringify({
+            [d.account_name]: updateTikTokData[d.account_name]
+        })
+    }, (resp) => {
+        console.log('有回应')
+    })  
+}
+// 更新数据
+const updateTikTokList = (data) => {
+    let keys = Object.keys(updateTikTokData)
+    let startDay = tiktokTime.value.startTime
+    let endDay = tiktokTime.value.endTime
+    if (!startDay || !endDay) {
+        alert('请选择开始和结束时间')
+        return
+    }
+    let y = startDay.$y
+    let m = startDay.$M + 1 < 10 ? '0' + startDay.$M + 1 : startDay.$M + 1
+    let d = startDay.$D < 10 ? '0' + startDay.$D : startDay.$D
+    let dy = endDay.$y
+    let dm = endDay.$M + 1 < 10 ? '0' + endDay.$M + 1 : endDay.$M + 1
+    let dd = endDay.$D < 10 ? '0' + endDay.$D : endDay.$D
+    if (keys.includes(data.account_name)) {
+        // 那么就更新,否则加进去
+        updateTikTokData[data.account_name] = {
+            startTime: `${y}-${m}-${d}`,
+            endTime: `${dy}-${dm}-${dd}`,
+            owner_id: data.owner_id,
+            account_id: data.account_id,
+            name: data.account_name
+        }
+    } else {
+        // 添加进去
+        updateTikTokData[data.account_name] = {
+            startTime: `${y}-${m}-${d}`,
+            endTime: `${dy}-${dm}-${dd}`,
+            owner_id: data.owner_id,
+            account_id: data.account_id,
+            name: data.account_name
+        }
+    }
+    // 发走
+    // chrome.runtime.sendMessage({
+    //     message: 'downloadTikTokXlsx',
+    //     data: JSON.stringify(updateTikTokData)
+    // }) 
+    console.log(updateTikTokData)
+}
+// 下载更新的数据
+const getTikTokXlsx = () => {
+    let keys = Object.keys(updateTikTokData)
+    let keys2 = Object.keys(currentDataShow.value)
+    console.log(keys, keys2)
+    if (keys.length == keys2.length) {
+        // 发起
+        downloadFileLoading.value = true
+        chrome.runtime.sendMessage({
+            message: 'downloadTikTokXlsx',
+            data: JSON.stringify(updateTikTokData)
+        }, (resp) => {
+            console.log('有回应')
+        })
+    } else {
+        alert('请你确认所有的时间均已选择')
+    }
+}
 // 确认要更新广告数据
 const confirmUpdate = () => {}
 onMounted(() => {
@@ -144,6 +246,8 @@ onMounted(() => {
             await initData()
             loading.value = false
 
+        } else if (resp.message === 'alreadyDownload') {
+            downloadFileLoading.value = false
         }
     })
 })
@@ -194,6 +298,36 @@ onMounted(() => {
     cursor: pointer;
     width: 80px;
     height: 80px;
+}
+.input_item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.input_row {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+}
+.input_row.title {
+    min-width: 360px;
+}
+.input_row span {
+    margin-right: 15px;
+}
+.input_row input {
+    flex: 1;
+}
+.title_container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sure_time {
+    margin-left: 10px;
+}
+.get_data_btn {
+    margin-right: 10px;
 }
 </style>
 

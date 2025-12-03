@@ -80,6 +80,7 @@ const Local_PORT = '8889'
 const Local_REFU_PaiPaiCODE = Local_URL + ":" + Local_PORT + '/getCode'
 const Local_CALL_USER = Local_URL + ":" + Local_PORT + '/callUser'
 const Local_SAVE_XLSX = Local_URL + ":" + Local_PORT + '/saveXlsx'
+const Local_SAVE_XLSX_TK = Local_URL + ":" + Local_PORT + '/saveXlsx_tk'
 
 // ------------ 本地服务器接口 ----------------
 
@@ -120,6 +121,7 @@ export default {
     Local_REFU_PaiPaiCODE,
     Local_SAVE_XLSX,
     Local_CALL_USER,
+    Local_SAVE_XLSX_TK,
     PaiPaiURL,
     TEMUListenStatu,
     TEMU_Traffic_Analysis

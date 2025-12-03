@@ -1232,6 +1232,16 @@ async function delayFn(timeout = 500) {
         }, timeout);
     })
 }
+// 防抖
+function _debounce(fn, time = 500) {
+    let timer;
+    return function(...arg) {
+        timer && clearTimeout(timer)
+        timer = setTimeout(() => {
+            fn.call(this, ...arg)
+        }, time)
+    }
+}
 async function initData() {
     // 这个是不管什么网页进来就要渲染的
     putTAbNav()
@@ -1410,6 +1420,7 @@ async function initData() {
         updateBtn.classList.add('active_show_btn')
         updateBtn.onclick = () => {
             rows = document.querySelectorAll('tr[data-testid="beast-core-table-body-tr"]')
+            console.log(rows,'2333')
             initBtnActive()
         }
         // 默认先调用一次
@@ -1474,6 +1485,11 @@ async function initData() {
                                 show_el.forEach(show => {
                                     let v = show.innerText
                                     if (v == '在售') {
+                                        let ul_container = show.parentElement.querySelector('.country_list')
+                                        if (ul_container) {
+                                            // 已经加过了,就不用了
+                                            return
+                                        }
                                         let ulEl = document.createElement('ul')
                                         ulEl.classList = 'country_list'
                                         // 好玩 监听滚动 然后把默认的滚动给关掉 然后设置他滚动的方向 可以实现直接横向滚动
@@ -1496,7 +1512,7 @@ async function initData() {
                                         let search_el = document.createElement('input')
                                         search_el.classList.add('search_el_ipt')
                                         search_el.setAttribute('placeholder', '搜索关键词')
-                                        let lis_list = document.querySelectorAll('.list_items')
+                                        let lis_list = ulEl.querySelectorAll('.list_items')
                                         // 绑定点击事件
                                         lis_list.forEach(li => {
                                             li.onclick = function() {
@@ -1548,11 +1564,174 @@ async function initData() {
             }, 1500);
         }
     }
+    // kuajingmaihuo
+    if (/temu\.com/.test(current_url) || /kuajingmaihuo\.com/.test(current_url)) {
+        console.log('看看', current_url)
+        if (/https:\/\/seller\.kuajingmaihuo\.com\/labor\/bill/.test(current_url)) {
+            // 点击导出
+            let timer = setInterval(() => {
+                let down_data = document.createElement('div')
+                down_data.classList.add('out_data')
+                down_data.innerText = '导出'
+                down_data.onclick = () => {
+                    console.log('点击了')
+                    chrome.runtime.sendMessage({
+                        message: 'updateMoney',
+                        data: localStorage.getItem('accountNum')
+                    })
+                    alert('金额保存成功')
+                }
+                let restBtn = document.querySelector('button[data-tracking-id="uKf6cB2qGfy0WELt"]')
+                if (restBtn) {
+                    clearInterval(timer)
+                    restBtn.parentElement.appendChild(down_data)
+                }
+            }, 1500);
+        }
+        else if (/https:\/\/agentseller\.temu\.com/.test(current_url)) {
+            // 点击导出
+            let timer = setInterval(() => {
+                let down_data = document.createElement('div')
+                down_data.classList.add('out_shop_data')
+                down_data.innerText = '导出店铺总体数据'
+                down_data.onclick = () => {
+                    alert('点击确认后开始读取并且下载数据')
+                    localStorage.setItem('updateCookie', false)
+                    chrome.runtime.sendMessage({
+                        message: 'download_TEMU_totalData',
+                        data: localStorage.getItem('accountNum')
+                    })
+                }
+                let restBtn = document.querySelector('.banner-block_container__UP4qL')
+                if (restBtn) {
+                    clearInterval(timer)
+                    restBtn.parentElement.insertBefore(down_data, restBtn)
+                }
+            }, 1500);
+        }
+        console.log('开始了没')
+        // 加一个可以去掉弹窗的
+        let hideBtn = document.createElement('button')
+        hideBtn.classList.add('floating-close-btn')
+        hideBtn.innerText = '关'
+        document.body.appendChild(hideBtn)
+        console.log('来没来')
+        hideBtn.onclick = () => {
+            let model = document.querySelectorAll('div[data-testid="beast-core-modal"]')
+            let mark = document.querySelectorAll('div[data-testid="beast-core-modal-mask"]')
+            model.forEach(m => m.style.display = 'none')
+            mark.forEach(k => k.style.display = 'none')
+        }
+    }
+    if (/https:\/\/www\.temu\.com/.test(location.href)) {
+        let downloadList = []
+        const TEMU_EL = document.createElement('div')
+        TEMU_EL.style.position = "fixed"
+        TEMU_EL.style.left = '15px'
+        TEMU_EL.style.top = '50%'
+        TEMU_EL.innerHTML = `
+            <svg class="temu_svg" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="54px" height="54px" class="_3My78Pdp" alt="temu" aria-label="temu" fill="#fb7701" stroke="none" stroke-width="18.962962962962962"><title>temu</title><path d="M796.4 0c125.7 0 227.6 101.9 227.6 227.6l0 568.8c0 125.7-101.9 227.6-227.6 227.6l-568.8 0c-125.7 0-227.6-101.9-227.6-227.6l0-568.8c0-125.7 101.9-227.6 227.6-227.6l568.8 0z m-256 531.9l-13.6 0c-12.1 0-22 9.8-21.9 21.9l0 150.5c0 12.1 9.8 22 21.9 22 12.1 0 22-9.8 22-22l0-98.8 37 52.2c7.7 10.8 23.7 10.8 31.5 0l37-52.2 0 98.8c0 12.1 9.8 22 22 22 12.1 0 22-9.8 21.9-22l0-150.5c0-12.1-9.8-22-21.9-21.9l-13.6 0c-5.2 0-10.2 2.5-13.2 6.8l-47.9 72-48-72c-3-4.3-7.9-6.8-13.2-6.8z m340.2 0c-12.1 0-22 9.8-22 21.9l0 91.9c0 28.9-16.3 43.7-43.1 43.6-26.8 0-43.1-15.3-43-44.9l0-90.6c0-12.1-9.8-22-22-21.9-12.1 0-22 9.8-21.9 21.9l0 91.6c0 53.6 32.8 80.9 86.4 80.9 53.6 0 87.6-27 87.5-82.2l0-90.3c0-12.1-9.8-22-21.9-21.9z m-616.9 0l-128.3 0c-12.1 0-22 9.8-22 21.9 0 12.1 9.8 22 22 22l42.2 0 0 128.3c0 12.1 9.8 22 21.9 22 12.1 0 22-9.8 22-22l0-128.3 42.2 0c12.1 0 22-9.8 22-22 0-12.1-9.8-22-22-21.9z m189.9 0l-118.9 0c-12.1 0-22 9.8-22 21.9l0 150.3c0 12.1 9.8 22 22 22l118.9 0c12.1 0 22-9.8 21.9-22 0-12.1-9.8-22-21.9-22l-97 0 0-31.2 84.4 0c12.1 0 22-9.8 22-21.9 0-12.1-9.8-22-22-22l-84.4 0 0-31.2 97 0c12.1 0 22-9.8 21.9-22 0-12.1-9.8-22-21.9-21.9z m-214.5-229.4l-4.1 0.1c-17.1 1.1-28.8 8.5-35.4 18.5-7.7-11.5-22.1-19.6-43.8-18.4l-0.5 0.7c-2.5 4-11.9 21.9 3.3 41.4 3.1 3.3 10.7 12.6 7.6 24.5l-44.1 71.3c-3.6 5.8-2 13.3 3.5 17.2 11.4 8 34.3 19 74 19 39.6 0 62.5-11 73.9-19l1.5-1.3c4.3-4.1 5.2-10.7 2-15.9l-44-71.3 0.3 1.3-0.5-2c-2.4-10.7 3.6-19.2 6.9-23l0.8-0.8c15.3-19.5 5.8-37.3 3.3-41.4l-0.4-0.7-4.3-0.2z m142.8 33.4c-15.1-30-34.7-35.1-44.5-27.3-7.5 6-24.8 29.7-26 31.3-19.1 27.1-18 33.7 6.5 49.1 13.8 8.7 24.9-2.5 29.7-5.8-2.3 14.3-9.3 36.8-19.8 52.6-5.7-4.3-9.9-7.6-12.5-10-3.3-3-8.3-2.8-11.5 0.3-1.5 1.5-2.3 3.5-2.2 5.7 0.1 2.1 1 4.1 2.5 5.5 25.5 23.3 59 36.5 94.7 36.6 35.8 0 69.5-13.2 95-36.6 3.3-3 3.4-8 0.4-11.2-3.2-3.2-8.2-3.3-11.5-0.3-2 1.8-4 3.5-6.1 5.2l-11.2-25c-1.8-4.3-3.8-9.7-6-16.2 1.1-2.7 3.4-5.3 6.7-8.7 2.4-2.4 4.4-4.8 5.9-7.1 7.4-11.7 3.2-18.6 0.9-23.2-5.3-10.8-13.6-7.3-19.6-0.9-7.4 7.8-14.6 11.2-26.2 13.8-9.7 2.2-17.2 1.1-23.4-2.8-8.6-5.3-21.8-25-21.8-25z m277.3-30.5c-32 30.4-1.3 96.5-59.5 124.6-6.4 3.1-11.7-7.1-20.3-7.1-24.3 0.2-70.7 21.6-72.5 32.4-1.5 8.9 18.3 16 76.7 16.1 50.8 0 67.2-77.3 85-77.4 17.8 0 9.5 70.1 7.6 77.4l18.6 0c-1.6-7.3-2.8-29.3-2.7-60.4 0-31.1 5.6-38 10.1-61.5 3.9-20.4-26.3-38.1-43-44.1z m182.4 2.5l-52.1 0c-33.7 0-61.7 26.1-64 59.7l-3.8 53.9c-1.8 25.6 18.5 47.3 44.1 47.4l99.4 0c25.7 0 45.9-21.7 44.2-47.4l-3.8-53.9c-2.4-33.6-30.3-59.7-64-59.7z m-442.6 124c15.7 0 27.7 7.7 32.1 22-10.7 2.8-21.4 4.2-32.3 4.1-16.4 0-22.2-1.5-32.7-4.3 4.2-12.6 18.1-21.8 32.9-21.8z m392.9-79.3l0 1.5c0 13 10.6 23.7 23.6 23.7 13 0 23.7-10.6 23.7-23.7l0-1.5c0-5.8 21-5.8 21 0l0 1.5c0 24.6-20 44.6-44.7 44.6-24.6 0-44.6-20-44.6-44.6l0-1.5c0-5.8 20.9-5.8 21 0z"></path></svg>
+            <ul class="temu_menu_ul">
+                <li class="menu_ul_li">
+                    <div class="down_180">下载180尺寸的商品图</div>
+                    <div class="down_800">下载800尺寸的商品图</div>
+                    <div class="down_video">下载视频</div>
+                    <div class="down_allPopup">关闭所有弹窗</div>
+                </li>
+            </ul>
+        `
+        TEMU_EL.className = 'temu_fix_logo'
+        document.body.appendChild(TEMU_EL)
+        const allOption = document.querySelectorAll('.menu_ul_li div')
+        for (let index = 0; index < allOption.length; index++) {
+            const each_menu_item = allOption[index]
+            each_menu_item.onclick = _debounce(function() {
+                const item_className = this.className
+                switch(item_className) {
+                    case 'down_180':
+                        chrome.runtime.sendMessage({
+                            message: 'download_TEMU_Pic',
+                            size: '180',
+                            downloadList: downloadList
+                        })
+                        break
+                    case 'down_800':
+                        chrome.runtime.sendMessage({
+                            message: 'download_TEMU_Pic',
+                            size: '800',
+                            downloadList: downloadList
+                        })
+                        break
+                    case 'down_video':
+                        const videoEl = document.querySelector('.R9rmoSPn')
+                        if (!videoEl) {
+                            alert("该链接没有上传视频")
+                        } else {
+                            chrome.runtime.sendMessage({
+                                message: 'download_TEMU_Video',
+                                videoHref: videoEl.src
+                            })
+                        }
+                    case 'down_allPopup':
+                        const allUn = document.querySelectorAll('.undefined')
+                        const markEl = document.querySelector('div[data-testid="beast-core-modal-mask"]')
+                        const popupEl = document.querySelector('div[data-testid="beast-core-modal"]')
+                        if (allUn) {
+                            for (let index = 0; index < allUn.length; index++) {
+                                allUn[index].remove() 
+                            }
+                        }
+                        if (markEl) markEl.remove()
+                        if (popupEl) popupEl.remove()
+                        break;
+                    case 'down_detail_pic':
+                        break;
+                    default:
+                        console.log('以外操作')
+                }
+            }, 500)
+        }
+        // 给这个icon添加一个右击的监听
+        document.querySelector('.temu_svg').oncontextmenu = function(e) {
+            e.preventDefault()
+            // 我被触发了
+            const menuList = document.querySelector('.temu_menu_ul')
+            menuList.style.display = 'block'
+            // 给整个网页添加点击监听
+            document.onclick = function(e) {
+                        menuList.style.display = 'none'
+                        // 把监听给关了
+                        document.onclick = null
+            }
+        }
+        const imgList = document.querySelectorAll('._2AOclWz7 img')
+        for (let index = 0; index < imgList.length; index++) {
+            console.log(imgList[index])
+            const href = imgList[index].dataset.src ? imgList[index].dataset.src : imgList[index].src
+            downloadList[index] = {
+                imgName: '产品图' + (index+1) + '.jpg',
+                '180': href,
+                '800': href.replace(/\?imageView.*/, '')
+            }
+        }
+    }
 }
 // 发一个请求给background
 chrome.runtime.sendMessage({
     message: 'startCollect'
 })
+// 拿数据
+// async function getWeiYing() {
+//     let url = 'http://omsbackend.jaspers.com.cn:16017/prod-api/oms/backend/outbound/list?pageNum=2&pageSize=50'
+//     const resp = await fetch(url, {
+//         headers: {
+//             clientid: 'e5cd7e4891bf95d1d19206ce24a7b32e',
+//             authorization: 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxOTU2MjA0NTcyMDY3NDkxODQxIiwicm5TdHIiOiJZRGlxbkpMSzBuQWZOTUhUQmlEYmRxZVN1MmJQTEp3UCIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjA4NzMwNyIsInVzZXJJZCI6MTk1NjIwNDU3MjA2NzQ5MTg0MSwidXNlck5hbWUiOiJ3aGx4MjAyMDAyMDJAMTI2LmNvbSIsImRlcHROYW1lIjoiIiwiZGVwdENhdGVnb3J5IjoiIn0.BRX1Ks1B__3wyQi3k0Tfr8QulLJ6kjfrHHO-OijxdGk'
+//         }
+//     }).then(res => res.json())
+//     console.log(resp)
+// }
+// getWeiYing()
 // 刚进来就直接把元素插入先 这个是弹窗的元素
 // 创
 show_el = document.createElement('div')

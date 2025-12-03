@@ -435,3 +435,122 @@ to {
     margin-left: 8px;
     background-color: transparent;
 }
+/* 悬浮按钮样式 */
+.floating-close-btn {
+/* 悬浮定位：右下角固定 */
+position: fixed;
+bottom: 30px;
+right: 30px;
+z-index: 9999; /* 层级最高，避免被遮挡 */
+
+/* 按钮样式 */
+width: 50px;
+height: 50px;
+border-radius: 50%; /* 圆形按钮 */
+background-color: #ff4d4f; /* 红色主色调，醒目 */
+color: white;
+font-size: 24px;
+border: none;
+outline: none;
+cursor: pointer;
+
+/* 悬浮动画效果 */
+transition: all 0.3s ease;
+box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3); /* 阴影增强悬浮感 */
+}
+
+/* 鼠标悬浮效果 */
+.floating-close-btn:hover {
+background-color: #ff7875; /* 浅色过渡 */
+transform: scale(1.1); /* 轻微放大 */
+box-shadow: 0 6px 16px rgba(255, 77, 79, 0.4);
+}
+
+/* 点击反馈 */
+.floating-close-btn:active {
+transform: scale(0.95); /* 按压缩小 */
+}
+
+/* 亚马逊下载按钮样式 */
+.amazon_download_btn {
+    background-color: rgb(93, 97, 93);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .5s ease;
+    display: flex;
+    margin-top: 15px;
+    justify-content: center;
+}
+.amazon_download_btn:hover {
+    background-color: rgb(31, 105, 31);
+}
+.text_1 {
+    position: fixed;
+    top: 100px;
+    right: 50px;
+    z-index: 9999;
+}
+
+.temu_fix_logo,
+.amazon_fix_logo,
+.alibaba_fix_logo {
+    z-index: 9999;
+    width: 60px;
+    height: 60px;
+    cursor: pointer;
+}
+
+.temu_fix_logo svg,
+.amazon_fix_logo svg {
+    width: 100%;
+    height: 100%;
+}
+
+.temu_fix_logo .temu_menu_ul,
+.amazon_fix_logo .amazon_menu_ul,
+.alibaba_fix_logo .alibaba_menu_ul {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.temu_fix_logo .temu_menu_ul .menu_ul_li div,
+.amazon_fix_logo .amazon_menu_ul .amazon_menu_ul_li div,
+.alibaba_fix_logo .alibaba_menu_ul .alibaba_menu_ul_li div {
+    position: relative;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: all .3s linear;
+}
+
+.temu_fix_logo .temu_menu_ul .menu_ul_li div:hover,
+.amazon_fix_logo .amazon_menu_ul .amazon_menu_ul_li div:hover,
+.alibaba_fix_logo .alibaba_menu_ul .alibaba_menu_ul_li div:hover {
+    border-bottom: 1px solid #ccc;
+    color: red;
+    font-weight: 700;
+}
+.out_data {
+    padding: 5px 10px;
+    color: red;
+    border: 1px solid #000;
+    cursor: pointer;
+}
+.out_shop_data {
+    text-align: center;
+    margin-bottom: 10px;
+    color: blue;
+    cursor: pointer;
+    transition: color ease-out .5s;
+}
+.out_shop_data:hover {
+    color: red;
+}
