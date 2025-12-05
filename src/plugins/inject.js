@@ -649,13 +649,20 @@ let country_map = [
 ]
 // 重写alert
 function injectFn() {
-    let link;
-    let p = chrome.runtime.getURL('js/zx.js')
-    link = document.createElement('script')
-    link.setAttribute('type', `text/javascript`)
-    link.setAttribute('src', p)
-    document.querySelector('head').insertBefore(link, document.querySelector('head').firstChild)
-    console.log("植入成功")
+    // 轮询等待<head>出现（避免null错误）
+    const checkHead = setInterval(() => {
+    const head = document.querySelector('head');
+        if (head) {
+        clearInterval(checkHead);
+        let link;
+        let p = chrome.runtime.getURL('js/zx.js')
+        link = document.createElement('script')
+        link.setAttribute('type', `text/javascript`)
+        link.setAttribute('src', p)
+        document.querySelector('head').insertBefore(link, document.querySelector('head').firstChild)
+        console.log("植入成功")
+        }
+    }, 10);
 }
 // 节流
 function throttle(fn) {
