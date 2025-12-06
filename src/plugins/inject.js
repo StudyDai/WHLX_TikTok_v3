@@ -1129,14 +1129,25 @@ chrome.runtime.onMessage.addListener((resp, sender, sendResponse) => {
             }
         }, 1500);
     }
+    else if (resp.message === 'translate') {
+        let div = document.querySelector('.translate_dd')
+        div.innerText = resp.data
+    }
 });
 function putTAbNav() {
+    let show = document.querySelector('.top-toast')
+    if (!show) {
+        show = document.createElement('div')
+        show.classList.add('top-toast')
+        show.setAttribute('id', 'toast')
+        document.body.appendChild(show)
+    }
     let tables = document.createElement('div')
     tables.classList.add('tables')
     let str = ''
     if (url_list) {
         url_list.forEach(url => {
-            str += `<span class="tab_item" data-index="${url.label}"><a target="__blank" href="${url.value}">${url.label}</a></span>`
+            str += `<span class="tab_item" data-index="${url.label}"><a target="__blank" href="${url.value}">${url.label}</a><span class="close">×</span></span>`
         })
         // 生成链接
     }
@@ -1167,7 +1178,57 @@ function putTAbNav() {
     let urlEl = document.getElementById('ur')
     let label = document.getElementById('ta')
     let show_container = document.querySelector('.show_container')
+    // 绑定点击事件
+    let span_s = document.querySelectorAll('.show_container > span')
+    console.log(span_s)
+    span_s.forEach(span => {
+        // 拿到每一个close
+        let close_el = span.querySelector('.close')
+        console.log(close_el)
+        close_el.onclick = function() {
+            console.log('点击了', this)
+            // 删掉
+            this.parentElement.remove()
+            chrome.runtime.sendMessage({
+                message: 'delete_item',
+                data: span.dataset.index
+            })
+        }
+    })
     let isanimal = false
+    let mouseup_fn = _debounce(async (e) => {
+        // 排除点击按钮/输入框等无关操作
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        
+        if (selectedText) {
+            console.log('实时检测到选中文本：', selectedText);
+            // 可执行后续操作：比如高亮、翻译、复制等
+            let left_posiiton = e.clientX
+            let top_posiiton = e.clientY
+            // 生成一个弹窗
+            let div = document.querySelector('.translate_dd')
+            if (!div) {
+                div = document.createElement('div')
+                div.classList.add('translate_dd')
+                document.body.appendChild(div)
+            }
+            div.style.left = left_posiiton + 'px'
+            div.style.top = top_posiiton + 'px'
+            // 这个地方要等那啥 我靠
+            chrome.runtime.sendMessage({
+                message: 'translate',
+                data: selectedText.replaceAll('\n', '')
+            })
+        }
+    })
+    let mousedown_fn = () => {      
+        let show_div = document.querySelector('.translate_dd')
+        if (show_div) {
+            document.body.removeChild(show_div)
+        }
+    }
     // 删除类名
     tables.ontransitionend = function() {
         // 动画执行结束啦
@@ -1228,9 +1289,37 @@ function putTAbNav() {
         })
         let Element = document.createElement('span')
         Element.classList.add('tab_item')
-        Element.innerHTML = `<a href="${url}">${val}</a>`
+        Element.innerHTML = `<a href="${url}">${val}</a><span class="close">×</span>`
         show_container.appendChild(Element)
     }
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key == 'q') {
+            document.removeEventListener('mouseup', mouseup_fn)
+            document.removeEventListener('mousedown', mousedown_fn)
+            show.innerText = '已关闭划词翻译'
+            show.classList.remove('show_green')
+            show.classList.add('show_red')
+            show.classList.add('show')
+            setTimeout(() => {
+                show.classList.remove('show')
+            }, 1000);
+            return
+        }
+        if ((!e.ctrlKey && e.key !== 'b') || (e.ctrlKey && e.key !== 'b')) {
+            return
+        }
+        // 添加监听
+        // 监听鼠标松开事件
+        document.addEventListener('mouseup', mouseup_fn)
+        document.addEventListener('mousedown', mousedown_fn)
+        show.innerText = '已开启划词翻译'
+        show.classList.remove('show_red')
+        show.classList.add('show_green')
+        show.classList.add('show')
+        setTimeout(() => {
+            show.classList.remove('show')
+        }, 1000);
+    })
 }
 async function delayFn(timeout = 500) {
     return new Promise((resolve) => {
@@ -1723,25 +1812,13 @@ async function initData() {
         }
     }
 }
-// 发一个请求给background
-chrome.runtime.sendMessage({
-    message: 'startCollect'
-})
-// 拿数据
-// async function getWeiYing() {
-//     let url = 'http://omsbackend.jaspers.com.cn:16017/prod-api/oms/backend/outbound/list?pageNum=2&pageSize=50'
-//     const resp = await fetch(url, {
-//         headers: {
-//             clientid: 'e5cd7e4891bf95d1d19206ce24a7b32e',
-//             authorization: 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxOTU2MjA0NTcyMDY3NDkxODQxIiwicm5TdHIiOiJZRGlxbkpMSzBuQWZOTUhUQmlEYmRxZVN1MmJQTEp3UCIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjA4NzMwNyIsInVzZXJJZCI6MTk1NjIwNDU3MjA2NzQ5MTg0MSwidXNlck5hbWUiOiJ3aGx4MjAyMDAyMDJAMTI2LmNvbSIsImRlcHROYW1lIjoiIiwiZGVwdENhdGVnb3J5IjoiIn0.BRX1Ks1B__3wyQi3k0Tfr8QulLJ6kjfrHHO-OijxdGk'
-//         }
-//     }).then(res => res.json())
-//     console.log(resp)
-// }
-// getWeiYing()
-// 刚进来就直接把元素插入先 这个是弹窗的元素
-// 创
 show_el = document.createElement('div')
 show_el.classList.add('show_tk_container')
-document.body.appendChild(show_el)
+window.onload = () => {
+    document.body.appendChild(show_el)
+    // 发一个请求给background
+    chrome.runtime.sendMessage({
+        message: 'startCollect'
+    })
+}
 })();

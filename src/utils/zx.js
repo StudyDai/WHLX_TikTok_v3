@@ -22,7 +22,7 @@ window.XMLHttpRequest = function () {
         let url2 = /seller\-acs\.aliexpress\.com\/h5\/mtop\.global\.merchant\.sales\.trend\/1\.0/
         let xiangmaiUrl = /\/fn\/search\-pc\/index/
         let current_order_obj = {}
-        console.log(data, '请求体')
+        // console.log(data, '请求体')
         let url = /\/\/seller\-acs\.aliexpress\.com\/h5\/mtop\.ae\.seller\.fulfillment\.shipping\.way\.bill\.get\/1\.0/
         if (url.test(data[1])) {
             console.log('看看哦', )

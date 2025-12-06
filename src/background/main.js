@@ -8,6 +8,7 @@ let TIKTOK_BUSINESS_MS_TOKEN = 'tiktokbueinessmstoken'
 let TIKTOK_BUSINESS_ADVERTISEMENT = 'tiktokbusinessadvertisement'
 let tiktok_advertisement = []
 let moneyNum = 0
+let collectList = null
 // // 德国仓 - 登录
 const LingXingErp_Login_GETTOKEN = async function(data) {
     let params = Object.assign(data, {
@@ -53,7 +54,7 @@ async function initCookies(url, key) {
 }
 // 直接调用我的自定义tab栏
 async function get_collect_list() {
-    const collectList = await utils.persistent.getLocalStorage('collectURL')
+    collectList = await utils.persistent.getLocalStorage('collectURL')
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         let tab = tabs[0]
         if (tab) {
@@ -869,6 +870,35 @@ chrome.runtime.onMessage.addListener(async (params, sender, sendResponse) => {
                 }
             }
         }
+    }
+    else if (params.message == 'translate') {
+        let data = params.data
+        let resp = await fetch('http://192.168.188.77:8889/translate', {
+            method: 'post',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                msg: data
+            })
+        }).then(res => res.json())
+        if (resp.code == 200) {
+            toActivePage('translate', resp.data)
+        }
+    }
+    else if (params.message == 'delete_item') {
+        let delete_index = 0
+        for (let index = 0; index < collectList.length; index++) {
+            const element = collectList[index];
+            if (element.label == params.data) {
+                // 删掉!
+                delete_index = index
+                break;
+            }
+        }
+        // 删掉,更新本地的存储
+        collectList.splice(delete_index, 1)
+        utils.persistent.addLocalStorage('collectURL', JSON.stringify(collectList))
     }
 })
 
